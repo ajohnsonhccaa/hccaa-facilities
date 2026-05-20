@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HCCAA Equipment Inventory</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -519,7 +520,7 @@ body{font-family:var(--sans);background:var(--gray-50);color:var(--gray-900);min
   <div class="submit-bar">
     <div>
       <div style="font-weight:600;font-size:13px" id="submitLabel">Ready to submit</div>
-      <div class="submit-info" id="submitInfo">Items will POST to your Power Automate flow and appear in the SharePoint list.</div>
+      <div class="submit-info" id="submitInfo">Items will be written directly to your SharePoint list via Microsoft Graph API.</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="add-btn secondary" onclick="saveDraft()">💾 Save Draft</button>
@@ -544,7 +545,7 @@ body{font-family:var(--sans);background:var(--gray-50);color:var(--gray-900);min
   </div>
 
   <div class="callout">
-    <strong>How it works:</strong> The form POSTs JSON to a Power Automate HTTP trigger. The flow catches it and creates a new item in your SharePoint list. Staff never sign in to anything — they just fill out the form and hit Submit.
+    <strong>How it works:</strong> Staff click "Sign in with Microsoft" and authenticate with their HCCAA account. Microsoft issues a secure token via MSAL. The form uses that token to write directly to the SharePoint list via Microsoft Graph — no passwords stored, no middleman.
   </div>
 
   <!-- Step 1 -->
@@ -603,43 +604,42 @@ body{font-family:var(--sans);background:var(--gray-50);color:var(--gray-900);min
 
   <!-- Step 2 -->
   <div class="guide-section">
-    <div class="guide-h"><span style="background:var(--blue-2);color:#fff;width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:600;flex-shrink:0">2</span> Build the Power Automate Flow</div>
+    <div class="guide-h"><span style="background:var(--blue-2);color:#fff;width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:600;flex-shrink:0">2</span> Create an Azure App Registration</div>
 
     <div class="step-block">
       <div class="step-num">a</div>
       <div class="step-content">
-        <div class="step-title">Go to make.powerautomate.com → Create → Instant cloud flow</div>
-        <div class="step-body">Name it: <strong>HCCAA Equipment Inventory — HTTP to SharePoint</strong>. For trigger, search and select <strong>"When an HTTP request is received"</strong>. Click Create.</div>
+        <div class="step-title">Go to portal.azure.com → search "App registrations" → + New registration</div>
+        <div class="step-body">Sign in with your HCCAA account. Name it: <strong>HCCAA Inventory Form</strong>. Supported account types: <strong>Accounts in this organizational directory only</strong>. Click Register.</div>
       </div>
     </div>
     <div class="step-block">
       <div class="step-num">b</div>
       <div class="step-content">
-        <div class="step-title">In the trigger step, click 'Use sample payload to generate schema'</div>
-        <div class="step-body">Go to the <strong>JSON Schema</strong> tab in this form, copy the full schema, paste it into the field, and click Done. The trigger will auto-configure all the fields.</div>
+        <div class="step-title">Add a Redirect URI</div>
+        <div class="step-body">On the overview page click <strong>Add a Redirect URI → Single-page application (SPA)</strong>.<br>
+        Enter: <code style="font-family:var(--mono);font-size:11px">https://ajohnsonhccaa.github.io/hccaa-facilities/</code><br>
+        Click Save. This tells Microsoft it's safe to send tokens to your GitHub Pages URL.</div>
       </div>
     </div>
     <div class="step-block">
       <div class="step-num">c</div>
       <div class="step-content">
-        <div class="step-title">Click '+ New step' → search 'SharePoint' → select 'Create item'</div>
-        <div class="step-body">
-          <strong>Site Address:</strong> https://hccaainc.sharepoint.com/sites/HCCAAFacilities<br>
-          <strong>List Name:</strong> Equipment Inventory<br>
-          Then map each field: click the value box → select the matching dynamic content from the HTTP trigger body.
-        </div>
+        <div class="step-title">Copy the Application (Client) ID</div>
+        <div class="step-body">On the app overview page, copy the <strong>Application (client) ID</strong>. You'll paste this into the form's Connect tab. That's the only credential needed — no secret required.</div>
       </div>
     </div>
     <div class="step-block">
       <div class="step-num">d</div>
       <div class="step-content">
-        <div class="step-title">Save the flow → copy the HTTP POST URL from the trigger step</div>
-        <div class="step-body">After saving, the trigger step shows a long URL starting with <code style="font-family:var(--mono);font-size:11px">https://prod-…logic.azure.com/workflows/…</code>. Copy the whole thing.</div>
+        <div class="step-title">Add API permissions</div>
+        <div class="step-body">Click <strong>API permissions → + Add a permission → Microsoft Graph → Delegated permissions</strong>.<br>
+        Search and add: <strong>Sites.ReadWrite.All</strong><br>
+        Click <strong>Grant admin consent for HCCAA → Yes</strong>.</div>
       </div>
     </div>
-
-    <div class="callout warn" style="margin-top:12px">
-      <strong>Field mapping tip:</strong> In the Create item step, the SharePoint column names must match exactly. If your column is "Equipment Name" the dynamic content token will be named "EquipmentName" (no space). Match them one by one down the list.
+    <div class="callout ok" style="margin-top:12px">
+      <strong>No client secret needed.</strong> MSAL delegated auth uses the signed-in user's identity — staff authenticate with their own HCCAA accounts. The only thing the form needs is the Client ID, which is not sensitive.
     </div>
   </div>
 
@@ -650,18 +650,18 @@ body{font-family:var(--sans);background:var(--gray-50);color:var(--gray-900);min
       <div class="step-num">a</div>
       <div class="step-content">
         <div class="step-title">Go to the Connect tab in this form</div>
-        <div class="step-body">Paste the HTTP POST URL from Power Automate into the URL field → click Save URL. The status indicator at the top will turn green once the connection is verified.</div>
+        <div class="step-body">Paste your Tenant ID, Client ID, Client Secret, and list name → click <strong>Save Credentials</strong>. The status indicator at the top turns green.</div>
       </div>
     </div>
     <div class="step-block">
       <div class="step-num">b</div>
       <div class="step-content">
-        <div class="step-title">Click 'Send Test Record' to verify the flow is working</div>
-        <div class="step-body">This sends a test item to your SharePoint list. Open the list and confirm the test row appeared. Then delete it from SharePoint before distributing the form to staff.</div>
+        <div class="step-title">Click 'Send Test Record' to verify the connection</div>
+        <div class="step-body">This authenticates to Microsoft Graph and creates a test item in your SharePoint list. Open the list and confirm the row appeared. Then delete it from SharePoint before distributing the form to staff.</div>
       </div>
     </div>
     <div class="callout ok" style="margin-top:12px">
-      <strong>Done.</strong> Share the saved HTML file with facilities staff via email, Teams, or a shared drive. They open it in any browser, fill it out, and click Submit — no login, no SharePoint access needed.
+      <strong>Done.</strong> Share <strong>ajohnsonhccaa.github.io/hccaa-facilities</strong> with facilities staff via Teams or email. They open it in any browser, fill it out, and click Submit — no login, no SharePoint access needed.
     </div>
   </div>
 
@@ -675,11 +675,11 @@ body{font-family:var(--sans);background:var(--gray-50);color:var(--gray-900);min
 <div class="page">
   <div style="margin-bottom:20px">
     <div style="font-size:22px;font-weight:600;color:var(--navy);margin-bottom:6px">JSON Schema</div>
-    <div style="font-size:13px;color:var(--gray-600)">Paste this into the Power Automate HTTP trigger → "Use sample payload to generate schema" field.</div>
+    <div style="font-size:13px;color:var(--gray-600)">Reference: the field structure the form sends to Microsoft Graph API. Useful if you later add a Power Automate flow or need to debug submissions.</div>
   </div>
 
   <div class="callout" style="margin-bottom:16px">
-    In your Power Automate flow, click the HTTP trigger step → click <strong>"Use sample payload to generate schema"</strong> → paste the entire block below → click Done. Power Automate will generate the JSON schema automatically from this sample.
+    This is the sample JSON payload showing all fields the form submits. The form now writes directly to SharePoint via Graph API — this tab is a reference for field names and types. SharePoint column internal names use <code style="font-family:var(--mono);font-size:11px">_x0020_</code> in place of spaces.
   </div>
 
   <div class="schema-wrap" id="schemaBlock">
@@ -705,40 +705,65 @@ body{font-family:var(--sans);background:var(--gray-50);color:var(--gray-900);min
 <div class="tab-panel" id="panel-connect">
 <div class="page">
   <div style="margin-bottom:24px">
-    <div style="font-size:22px;font-weight:600;color:var(--navy);margin-bottom:6px">Connect to Power Automate</div>
-    <div style="font-size:13px;color:var(--gray-600)">Paste your HTTP trigger URL here. The URL is saved in this browser so staff don't need to set it up again.</div>
+    <div style="font-size:22px;font-weight:600;color:var(--navy);margin-bottom:6px">Connect to SharePoint</div>
+    <div style="font-size:13px;color:var(--gray-600)">One-time setup: enter your App Client ID, then staff sign in with their HCCAA Microsoft accounts.</div>
+  </div>
+
+  <div class="callout" style="margin-bottom:20px">
+    <strong>How it works:</strong> Staff click "Sign in with Microsoft" and log in with their normal HCCAA email and password. Microsoft issues a secure token — no password is ever stored in the form. Submissions go directly to SharePoint under their own identity.
   </div>
 
   <div class="connect-card">
-    <span class="connect-label">Power Automate HTTP POST URL</span>
-    <input class="url-input" type="url" id="flowUrl"
-      placeholder="https://prod-xx.westus.logic.azure.com/workflows/…"
-      oninput="checkUrl()">
-    <div class="btn-row">
-      <button class="action-btn btn-save" onclick="saveUrl()">Save URL</button>
-      <button class="action-btn btn-test" onclick="sendTest()">Send Test Record</button>
-      <button class="action-btn btn-clear" onclick="clearUrl()">Clear</button>
+    <span class="connect-label">Application (Client) ID <span style="color:var(--red)">*</span></span>
+    <input class="url-input" type="text" id="clientId"
+      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+    <div style="font-size:11px;color:var(--gray-400);margin-top:4px">From Azure Portal → App registrations → HCCAA Inventory Form → Application (client) ID. Only needs to be entered once per device.</div>
+    <div class="btn-row" style="margin-top:10px">
+      <button class="action-btn btn-save" onclick="saveClientId()">Save Client ID</button>
+      <button class="action-btn btn-clear" onclick="clearClientId()">Clear</button>
     </div>
-    <div class="test-result" id="testResult"></div>
+  </div>
+
+  <div class="connect-card">
+    <span class="connect-label">Sign In</span>
+    <div style="font-size:13px;color:var(--gray-600);margin-bottom:12px">Sign in with your HCCAA Microsoft 365 account to authorize submissions to SharePoint.</div>
+    <button class="action-btn btn-save" id="signInBtn" onclick="msalSignIn()" style="display:flex;align-items:center;gap:10px;font-size:14px;padding:10px 20px">
+      <svg width="18" height="18" viewBox="0 0 21 21" fill="none"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg>
+      Sign in with Microsoft
+    </button>
+    <button class="action-btn btn-clear" id="signOutBtn" onclick="msalSignOut()" style="display:none;margin-top:8px">Sign out</button>
+    <div style="margin-top:10px;font-size:13px;font-weight:500;color:var(--teal)" id="signedInAs"></div>
   </div>
 
   <div class="connect-card">
     <span class="connect-label">Connection Status</span>
     <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
       <div class="status-dot" id="connectDot"></div>
-      <div style="font-size:13px" id="connectMsg">No URL saved yet.</div>
+      <div style="font-size:13px" id="connectMsg">Not signed in.</div>
     </div>
     <div style="font-size:12px;color:var(--gray-400);margin-top:8px" id="savedUrlDisplay"></div>
   </div>
 
-  <div class="callout">
-    <strong>Where to find the URL:</strong> In Power Automate, open your flow → click the "When an HTTP request is received" trigger step → after saving the flow, the HTTP POST URL appears at the bottom of that step. It's a long URL starting with <code style="font-family:var(--mono);font-size:11px">https://prod-</code>
+  <div class="connect-card">
+    <span class="connect-label">Test Connection</span>
+    <div style="font-size:13px;color:var(--gray-600);margin-bottom:10px">Sends a test record to your SharePoint list to confirm everything is working.</div>
+    <button class="action-btn btn-test" onclick="sendTest()">Send Test Record</button>
+    <div class="test-result" id="testResult" style="margin-top:12px"></div>
   </div>
 
   <div style="margin-top:20px">
-    <div style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:10px">Distribute to Staff</div>
-    <div class="callout ok">
-      Once the URL is saved and the test passes: save this HTML file (File → Save As in your browser, or right-click → Save Page As) and share that saved file with facilities staff via email, Teams, or a shared network drive. The URL is embedded in the saved file — staff just open it and start submitting.
+    <div style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:10px">Pre-configured for your Facilities Site</div>
+    <div style="overflow-x:auto">
+      <table class="col-table">
+        <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>SharePoint Site</td><td style="font-family:var(--mono);font-size:11px">hccaainc.sharepoint.com/sites/HCCAAFacilitiesManagement</td></tr>
+          <tr><td>Site ID</td><td style="font-family:var(--mono);font-size:11px">8d87ed28-9148-463e-9cb9-8221c5dac306</td></tr>
+          <tr><td>List Name</td><td style="font-family:var(--mono);font-size:11px">Equipment Inventory</td></tr>
+          <tr><td>Auth Method</td><td style="font-family:var(--mono);font-size:11px">MSAL delegated (user login)</td></tr>
+          <tr><td>Scopes</td><td style="font-family:var(--mono);font-size:11px">Sites.ReadWrite.All</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -1026,32 +1051,154 @@ function updateCenter() {
   document.getElementById('sumCenter').textContent = centerName || '—';
 }
 
+// ── MSAL config ───────────────────────────────────────────────────
+const SITE_ID   = '8d87ed28-9148-463e-9cb9-8221c5dac306';
+const LIST_NAME = 'Equipment Inventory';
+const SCOPES    = ['https://graph.microsoft.com/Sites.ReadWrite.All'];
+const TENANT    = 'hccaainc.onmicrosoft.com';
+
+let msalInstance = null;
+let currentAccount = null;
+
+function initMsal(clientId) {
+  msalInstance = new msal.PublicClientApplication({
+    auth: {
+      clientId,
+      authority: `https://login.microsoftonline.com/${TENANT}`,
+      redirectUri: window.location.href.split('?')[0].split('#')[0],
+    },
+    cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false },
+  });
+  // Check if already signed in
+  const accounts = msalInstance.getAllAccounts();
+  if (accounts.length > 0) {
+    currentAccount = accounts[0];
+    updateSignInUI(true);
+  }
+}
+
+async function msalSignIn() {
+  if (!msalInstance) { toast('⚠️ Save your Client ID first'); return; }
+  try {
+    const result = await msalInstance.loginPopup({ scopes: SCOPES });
+    currentAccount = result.account;
+    updateSignInUI(true);
+    toast('✅ Signed in as ' + currentAccount.username);
+  } catch(e) {
+    if (e.errorCode !== 'user_cancelled') toast('Sign-in failed: ' + e.message);
+  }
+}
+
+async function msalSignOut() {
+  if (!msalInstance) return;
+  await msalInstance.logoutPopup({ account: currentAccount });
+  currentAccount = null;
+  updateSignInUI(false);
+}
+
+async function getGraphToken() {
+  if (!msalInstance || !currentAccount) throw new Error('Not signed in — go to the Connect tab');
+  try {
+    const result = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: currentAccount });
+    return result.accessToken;
+  } catch(e) {
+    // Silent failed — show popup
+    const result = await msalInstance.acquireTokenPopup({ scopes: SCOPES, account: currentAccount });
+    return result.accessToken;
+  }
+}
+
+function updateSignInUI(signedIn) {
+  const dot     = document.getElementById('statusDot');
+  const txt     = document.getElementById('statusText');
+  const cdot    = document.getElementById('connectDot');
+  const cmsg    = document.getElementById('connectMsg');
+  const disp    = document.getElementById('savedUrlDisplay');
+  const inBtn   = document.getElementById('signInBtn');
+  const outBtn  = document.getElementById('signOutBtn');
+  const asEl    = document.getElementById('signedInAs');
+  const badge   = document.getElementById('connectBadge');
+
+  if (signedIn && currentAccount) {
+    dot.className  = 'status-dot connected'; txt.textContent  = 'Signed in';
+    cdot.className = 'status-dot connected';
+    cmsg.textContent = 'Signed in — ready to submit to SharePoint.';
+    disp.textContent = currentAccount.username;
+    if (inBtn)  inBtn.style.display  = 'none';
+    if (outBtn) outBtn.style.display = '';
+    if (asEl)   asEl.textContent = '✓ Signed in as ' + currentAccount.username;
+    if (badge)  { badge.className = 'tab-badge ok'; badge.textContent = '✓'; }
+  } else {
+    dot.className  = 'status-dot'; txt.textContent  = 'Not signed in';
+    cdot.className = 'status-dot'; cmsg.textContent = 'Not signed in.';
+    disp.textContent = '';
+    if (inBtn)  inBtn.style.display  = '';
+    if (outBtn) outBtn.style.display = 'none';
+    if (asEl)   asEl.textContent = '';
+    if (badge)  { badge.className = 'tab-badge'; badge.textContent = '②'; }
+  }
+}
+
+// Client ID save/clear
+function saveClientId() {
+  const id = document.getElementById('clientId').value.trim();
+  if (!id) { toast('⚠️ Enter the Client ID first'); return; }
+  try { localStorage.setItem('hccaa_client_id', id); } catch(e){}
+  initMsal(id);
+  toast('✅ Client ID saved — click Sign in with Microsoft');
+}
+function clearClientId() {
+  try { localStorage.removeItem('hccaa_client_id'); } catch(e){}
+  document.getElementById('clientId').value = '';
+  msalInstance = null; currentAccount = null;
+  updateSignInUI(false);
+  toast('Client ID cleared');
+}
+
+async function postToSharePoint(token, fields) {
+  const url = `https://graph.microsoft.com/v1.0/sites/${SITE_ID}/lists/${encodeURIComponent(LIST_NAME)}/items`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(()=>({}));
+    throw new Error(err.error?.message || `SharePoint error: HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
 // ── Submit all ────────────────────────────────────────────────────
 async function submitAll() {
-  const url = getUrl();
-  if (!url) { toast('⚠️ No Power Automate URL set — go to the Connect tab'); switchTabByName('connect'); return; }
+  if (!currentAccount) {
+    toast('⚠️ Please sign in first — go to the Connect tab');
+    switchTabByName('connect'); return;
+  }
   const all = Object.values(items).flat();
   if (all.length === 0) { toast('⚠️ No items to submit'); return; }
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true; btn.querySelector('span').textContent = 'Submitting…';
 
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.querySelector('span').textContent = 'Getting token…';
+
+  let token;
+  try {
+    token = await getGraphToken();
+  } catch(e) {
+    btn.disabled = false; btn.querySelector('span').textContent = 'Submit All Items';
+    toast('✗ Authentication failed: ' + e.message);
+    return;
+  }
+
+  btn.querySelector('span').textContent = 'Submitting…';
   let sent = 0, failed = 0;
+
   for (const item of all) {
-    const payload = buildPayload(item);
     try {
-      const res = await fetch(url, {
-        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
-      });
-      if (res.ok || res.status === 202) {
-        logEntry(item, 'sent');
-        sent++;
-      } else {
-        logEntry(item, 'fail', `HTTP ${res.status}`);
-        failed++;
-      }
+      await postToSharePoint(token, buildFields(item));
+      logEntry(item, 'sent'); sent++;
     } catch(e) {
-      logEntry(item, 'fail', e.message);
-      failed++;
+      logEntry(item, 'fail', e.message); failed++;
     }
   }
 
@@ -1060,155 +1207,98 @@ async function submitAll() {
   updateSummary();
 
   if (failed === 0) {
-    toast(`✅ ${sent} item${sent!==1?'s':''} submitted to SharePoint successfully`);
-    // Clear submitted items
+    toast(`✅ ${sent} item${sent!==1?'s':''} submitted to SharePoint`);
     Object.keys(items).forEach(c => items[c] = []);
     renderItems(); updateSummary();
   } else {
-    toast(`⚠️ ${sent} sent, ${failed} failed — check the Submissions tab for details`);
+    toast(`⚠️ ${sent} sent, ${failed} failed — check the Submissions tab`);
   }
 }
 
-function buildPayload(item) {
+function buildFields(item) {
   const center = document.getElementById('centerName').value;
   const ctype  = document.getElementById('centerType').value;
   const iname  = document.getElementById('inspName').value;
+  const idate  = document.getElementById('inspDate').value;
   return {
-    EquipmentName:      item.name,
-    CenterName:         center,
-    CenterType:         ctype,
-    EquipmentCategory:  item.category,
-    Manufacturer:       item.manufacturer,
-    ModelNumber:        item.model,
-    SerialNumber:       item.serial,
-    Year:               item.year,
-    Location:           item.location,
-    Quantity:           parseInt(item.quantity)||1,
-    Condition:          item.condition,
-    MaintenanceFrequency: item.frequency,
-    LastServiceDate:    item.lastService,
-    NextDueDate:        item.nextDue,
-    WarrantyExpiry:     item.warranty,
-    VendorContractor:   item.vendor,
-    WorkOrderStatus:    item.workOrder,
-    InspectorName:      iname,
-    Notes:              item.notes,
+    Title:                    item.name,
+    CenterName:               center,
+    CenterType:               ctype,
+    EquipmentCategory:        item.category,
+    Manufacturer:             item.manufacturer,
+    ModelNumber:              item.model,
+    SerialNumber:             item.serial,
+    Year_x002f_Age:           item.year,
+    LocationonSite:           item.location,
+    Quantity:                 parseInt(item.quantity) || 1,
+    Condition:                item.condition,
+    MaintenanceFrequency:     item.frequency,
+    LastServiceDate:          item.lastService  || null,
+    NextDueDate:              item.nextDue      || null,
+    WarrantyExpiry:           item.warranty     || null,
+    Vendor_x002f_Contractor:  item.vendor,
+    WorkOrderStatus:          item.workOrder,
+    InspectorName:            iname,
+    InspectionDate:           idate            || null,
+    Notes:                    item.notes,
   };
 }
+
+function buildPayload(item) { return buildFields(item); }
 
 // ── Schema ────────────────────────────────────────────────────────
 function buildSamplePayload() {
   return {
-    EquipmentName:       "Rooftop Unit #1",
-    CenterName:          "Belton SC",
-    CenterType:          "Senior Center",
-    EquipmentCategory:   "HVAC",
-    Manufacturer:        "Carrier",
-    ModelNumber:         "48XL036-060",
-    SerialNumber:        "1234ABC",
-    Year:                "2015",
-    Location:            "Roof - South Side",
-    Quantity:            1,
-    Condition:           "Fair",
-    MaintenanceFrequency:"Quarterly",
-    LastServiceDate:     "2026-02-15",
-    NextDueDate:         "2026-05-15",
-    WarrantyExpiry:      "",
-    VendorContractor:    "ABC HVAC Services 254-555-0100",
-    WorkOrderStatus:     "None Needed",
-    InspectorName:       "Jane Smith",
-    Notes:               "Filter size 20x25x1. Belt showing wear - check next visit.",
+    EquipmentName:'Rooftop Unit #1', CenterName:'Belton SC', CenterType:'Senior Center',
+    EquipmentCategory:'HVAC', Manufacturer:'Carrier', ModelNumber:'48XL036-060',
+    SerialNumber:'1234ABC', Year:'2015', Location:'Roof - South Side', Quantity:1,
+    Condition:'Fair', MaintenanceFrequency:'Quarterly', LastServiceDate:'2026-02-15',
+    NextDueDate:'2026-05-15', WarrantyExpiry:'', VendorContractor:'ABC HVAC 254-555-0100',
+    WorkOrderStatus:'None Needed', InspectorName:'Jane Smith',
+    Notes:'Filter size 20x25x1. Belt showing wear.',
   };
 }
-
 function renderSchema() {
-  const sample = buildSamplePayload();
-  document.getElementById('schemaText').textContent = JSON.stringify(sample, null, 2);
-  const tbody = document.getElementById('fieldRef');
-  tbody.innerHTML = FIELDS.map((f,i) =>
+  document.getElementById('schemaText').textContent = JSON.stringify(buildSamplePayload(), null, 2);
+  document.getElementById('fieldRef').innerHTML = FIELDS.map(f =>
     `<tr><td><code style="font-family:var(--mono);font-size:11px">${f.key}</code></td><td>${f.spCol}</td><td class="col-type">${f.type}</td></tr>`
   ).join('');
 }
-
 function copySchema() {
-  const sample = buildSamplePayload();
-  navigator.clipboard.writeText(JSON.stringify(sample, null, 2))
-    .then(() => toast('✅ Sample payload copied to clipboard'))
-    .catch(() => toast('Select the text and copy manually'));
+  navigator.clipboard.writeText(JSON.stringify(buildSamplePayload(), null, 2))
+    .then(() => toast('✅ Copied'))
+    .catch(() => toast('Select and copy manually'));
 }
 
-// ── Connect / URL management ──────────────────────────────────────
-function getUrl() {
-  try { return localStorage.getItem('hccaa_flow_url') || ''; } catch(e){ return ''; }
-}
-function saveUrl() {
-  const url = document.getElementById('flowUrl').value.trim();
-  if (!url.startsWith('http')) { toast('⚠️ URL must start with https://'); return; }
-  try {
-    localStorage.setItem('hccaa_flow_url', url);
-    document.getElementById('flowUrl').className = 'url-input saved';
-    updateConnectionUI(true, url);
-    toast('✅ URL saved — click Send Test Record to verify');
-    document.getElementById('connectBadge').className = 'tab-badge ok';
-    document.getElementById('connectBadge').textContent = '✓';
-  } catch(e){ toast('Could not save — localStorage unavailable'); }
-}
-function clearUrl() {
-  try { localStorage.removeItem('hccaa_flow_url'); } catch(e){}
-  document.getElementById('flowUrl').value = '';
-  document.getElementById('flowUrl').className = 'url-input';
-  updateConnectionUI(false);
-  document.getElementById('connectBadge').className = 'tab-badge';
-  document.getElementById('connectBadge').textContent = '②';
-}
-function checkUrl() {
-  const v = document.getElementById('flowUrl').value;
-  document.getElementById('flowUrl').className = 'url-input' + (v.startsWith('http') ? '' : '');
-}
-function updateConnectionUI(connected, url) {
-  const dot  = document.getElementById('statusDot');
-  const txt  = document.getElementById('statusText');
-  const cdot = document.getElementById('connectDot');
-  const cmsg = document.getElementById('connectMsg');
-  const disp = document.getElementById('savedUrlDisplay');
-  if (connected) {
-    dot.className = 'status-dot connected'; txt.textContent = 'Connected';
-    cdot.className = 'status-dot connected'; cmsg.textContent = 'Flow URL saved. Ready to submit.';
-    disp.textContent = url ? url.substring(0,60) + '…' : '';
-  } else {
-    dot.className = 'status-dot'; txt.textContent = 'Not connected';
-    cdot.className = 'status-dot'; cmsg.textContent = 'No URL saved yet.';
-    disp.textContent = '';
-  }
-}
-
+// ── Test connection ───────────────────────────────────────────────
 async function sendTest() {
-  const url = getUrl() || document.getElementById('flowUrl').value.trim();
-  if (!url) { toast('⚠️ Enter the URL first'); return; }
+  if (!currentAccount) { toast('⚠️ Sign in first'); return; }
   const resultEl = document.getElementById('testResult');
   resultEl.style.display = 'block';
   resultEl.className = 'test-result pending';
-  resultEl.textContent = '⏳ Sending test record to Power Automate…';
-  const payload = buildSamplePayload();
-  payload.EquipmentName = 'TEST RECORD — DELETE ME';
-  payload.Notes = 'This is an automated test from the HCCAA Inventory Form. Please delete this record from SharePoint.';
+  resultEl.textContent = '⏳ Getting token…';
   try {
-    const res = await fetch(url, {
-      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    const token = await getGraphToken();
+    resultEl.textContent = '⏳ Writing test record to SharePoint…';
+    await postToSharePoint(token, {
+      Title:             'TEST RECORD — DELETE ME',
+      CenterName:        'Belton SC',
+      EquipmentCategory: 'HVAC',
+      Notes:             'Automated test from HCCAA Inventory Form. Delete this record.',
     });
-    if (res.ok || res.status === 202) {
-      resultEl.className = 'test-result ok';
-      resultEl.textContent = '✅ Test record sent successfully (HTTP ' + res.status + '). Check your SharePoint list — a row named "TEST RECORD — DELETE ME" should appear within 30 seconds. Delete it before going live.';
-      saveUrl();
-    } else {
-      resultEl.className = 'test-result fail';
-      resultEl.textContent = '✗ Request failed: HTTP ' + res.status + '. Double-check the URL and that the flow is turned on in Power Automate.';
-    }
+    resultEl.className = 'test-result ok';
+    resultEl.textContent = '✅ Test record created in SharePoint! Open your Equipment Inventory list, confirm the row is there, then delete it. You are ready to go live.';
   } catch(e) {
     resultEl.className = 'test-result fail';
-    resultEl.textContent = '✗ Could not reach the URL: ' + e.message + '. Check that the URL is correct and the flow is enabled.';
+    resultEl.textContent = '✗ ' + e.message;
   }
 }
+
+// ── Credential helpers (no-ops kept for compat) ───────────────────
+function saveCreds() {}
+function clearCreds() { clearClientId(); }
+function checkCreds() {}
+function updateConnectionUI(c) { updateSignInUI(c); }
 
 function switchTabByName(name) {
   const tabs = document.querySelectorAll('.tab');
@@ -1282,13 +1372,12 @@ document.getElementById('inspDate').valueAsDate = new Date();
 switchCat('HVAC');
 updateSummary();
 
-const saved = getUrl();
-if (saved) {
-  document.getElementById('flowUrl').value = saved;
-  document.getElementById('flowUrl').className = 'url-input saved';
-  updateConnectionUI(true, saved);
-  document.getElementById('connectBadge').className = 'tab-badge ok';
-  document.getElementById('connectBadge').textContent = '✓';
+// Restore saved Client ID and initialize MSAL if available
+const savedClientId = localStorage.getItem('hccaa_client_id') || '';
+if (savedClientId) {
+  const el = document.getElementById('clientId');
+  if (el) el.value = savedClientId;
+  initMsal(savedClientId);
 }
 
 setTimeout(loadDraft, 100);
