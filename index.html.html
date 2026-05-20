@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HCCAA Equipment Inventory</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --navy:    #0F2444;
+  --blue:    #1B4FBF;
+  --blue-2:  #2563EB;
+  --blue-lt: #EBF2FF;
+  --teal:    #0B6E57;
+  --teal-lt: #E6F7F3;
+  --amber:   #92500A;
+  --amber-lt:#FFF7E6;
+  --red:     #A31A1A;
+  --red-lt:  #FFF0F0;
+  --green:   #166534;
+  --grn-lt:  #F0FDF4;
+  --gray-50: #F8F8F7;
+  --gray-100:#EFEFED;
+  --gray-200:#DDDCDA;
+  --gray-400:#9B9A97;
+  --gray-600:#6B6A67;
+  --gray-900:#1A1918;
+  --white:   #FFFFFF;
+  --mono:    'IBM Plex Mono', monospace;
+  --sans:    'IBM Plex Sans', sans-serif;
+  --radius:  6px;
+}
+
+body{font-family:var(--sans);background:var(--gray-50);color:var(--gray-900);min-height:100vh;font-size:14px}
+
+/* ── Top bar ── */
+.topbar{
+  background:var(--navy);
+  color:#fff;
+  height:52px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;
+  position:sticky;top:0;z-index:300;
+  border-bottom:2px solid var(--blue);
+}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-badge{
+  font-family:var(--mono);font-size:10px;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;
+  background:var(--blue-2);color:#fff;
+  padding:2px 8px;border-radius:3px;
+}
+.topbar-title{font-weight:600;font-size:14px;letter-spacing:-.01em}
+.topbar-right{display:flex;gap:8px;align-items:center}
+.connection-status{
+  display:flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.5);
+}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--gray-400)}
+.status-dot.connected{background:#4ADE80}
+.status-dot.error{background:#F87171}
+
+/* ── Tab bar ── */
+.tabs{
+  background:var(--white);
+  border-bottom:1px solid var(--gray-200);
+  display:flex;
+  padding:0 20px;
+  position:sticky;top:52px;z-index:200;
+}
+.tab{
+  font-family:var(--sans);font-size:13px;font-weight:500;
+  color:var(--gray-600);
+  padding:12px 16px;
+  border:none;background:transparent;cursor:pointer;
+  border-bottom:2px solid transparent;
+  transition:all .15s;white-space:nowrap;
+  letter-spacing:-.01em;
+}
+.tab:hover{color:var(--gray-900)}
+.tab.active{color:var(--blue-2);border-bottom-color:var(--blue-2)}
+.tab-badge{
+  display:inline-block;
+  background:var(--blue-lt);color:var(--blue-2);
+  font-size:10px;font-weight:600;font-family:var(--mono);
+  padding:1px 6px;border-radius:10px;margin-left:5px;
+}
+.tab-badge.ok{background:var(--grn-lt);color:var(--green)}
+
+/* ── Page layout ── */
+.page{max-width:860px;margin:0 auto;padding:28px 20px 80px}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* ── Summary strip ── */
+.summary-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
+  background:var(--gray-200);
+  border:1px solid var(--gray-200);
+  border-radius:var(--radius);
+  overflow:hidden;
+  margin-bottom:24px;
+}
+.sum-cell{
+  background:var(--white);
+  padding:14px 16px;
+}
+.sum-val{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--navy);line-height:1}
+.sum-lbl{font-size:11px;color:var(--gray-400);margin-top:4px;text-transform:uppercase;letter-spacing:.06em}
+
+/* ── Form card ── */
+.fcard{
+  background:var(--white);
+  border:1px solid var(--gray-200);
+  border-radius:var(--radius);
+  margin-bottom:16px;
+  overflow:hidden;
+}
+.fcard-head{
+  display:flex;align-items:center;gap:10px;
+  padding:13px 16px;
+  border-bottom:1px solid var(--gray-100);
+  cursor:pointer;user-select:none;
+}
+.fcard-icon{
+  width:28px;height:28px;border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;
+}
+.fcard-title{font-weight:600;font-size:13px;flex:1}
+.fcard-chevron{font-size:11px;color:var(--gray-400);transition:transform .2s}
+.fcard-chevron.open{transform:rotate(180deg)}
+.fcard-body{padding:16px;display:none}
+.fcard-body.open{display:block}
+
+/* ── Item cards ── */
+.item-list{display:flex;flex-direction:column;gap:10px}
+.item-card{
+  border:1px solid var(--gray-200);
+  border-radius:var(--radius);
+  overflow:hidden;
+}
+.item-card.complete{border-left:3px solid var(--teal)}
+.item-card.partial{border-left:3px solid #F59E0B}
+.item-head{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;background:var(--gray-50);
+  cursor:pointer;
+}
+.item-num{
+  font-family:var(--mono);font-size:10px;font-weight:600;
+  color:var(--gray-400);min-width:24px;
+}
+.item-name{font-size:13px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item-name.empty{color:var(--gray-400);font-style:italic;font-weight:400}
+.item-dot{width:7px;height:7px;border-radius:50%;background:var(--gray-200);flex-shrink:0}
+.item-dot.ok{background:var(--teal)}
+.item-dot.partial{background:#F59E0B}
+.item-actions{display:flex;gap:2px;flex-shrink:0}
+.icon-btn{
+  width:28px;height:28px;border:none;background:transparent;
+  border-radius:4px;cursor:pointer;font-size:13px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--gray-400);transition:all .12s;
+}
+.icon-btn:hover{background:var(--gray-100);color:var(--gray-900)}
+.icon-btn.del:hover{background:var(--red-lt);color:var(--red)}
+.item-body{padding:14px;display:none;border-top:1px solid var(--gray-100)}
+.item-body.open{display:block}
+
+/* ── Fields ── */
+.fg{display:grid;gap:12px}
+.fg-2{grid-template-columns:1fr 1fr}
+.fg-3{grid-template-columns:1fr 1fr 1fr}
+.fg-full{grid-column:1/-1}
+
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{
+  font-size:10px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--gray-600);
+}
+.field label .req{color:var(--blue-2);margin-left:2px}
+
+.field input,.field select,.field textarea{
+  font-family:var(--sans);font-size:13px;
+  padding:7px 10px;
+  border:1px solid var(--gray-200);
+  border-radius:var(--radius);
+  background:var(--gray-50);
+  color:var(--gray-900);
+  width:100%;
+  transition:border-color .12s,background .12s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  outline:none;border-color:var(--blue-2);background:var(--white);
+}
+.field textarea{resize:vertical;min-height:64px}
+
+/* freq pills */
+.freq-wrap{display:flex;flex-wrap:wrap;gap:5px}
+.freq-radio{display:none}
+.freq-lbl{
+  font-family:var(--mono);font-size:11px;font-weight:500;
+  padding:4px 10px;border-radius:20px;
+  border:1px solid var(--gray-200);
+  cursor:pointer;color:var(--gray-600);background:var(--white);
+  transition:all .12s;
+}
+.freq-radio:checked+.freq-lbl{
+  background:var(--navy);border-color:var(--navy);color:#fff;
+}
+
+/* condition pills */
+.cond-wrap{display:flex;flex-wrap:wrap;gap:5px}
+.cond-radio{display:none}
+.cond-lbl{
+  font-size:12px;font-weight:500;
+  padding:5px 12px;border-radius:4px;
+  border:1px solid var(--gray-200);
+  cursor:pointer;color:var(--gray-600);background:var(--white);
+  transition:all .12s;
+}
+.cond-radio:checked+.cond-lbl.good{background:var(--grn-lt);border-color:var(--green);color:var(--green)}
+.cond-radio:checked+.cond-lbl.fair{background:var(--amber-lt);border-color:var(--amber);color:var(--amber)}
+.cond-radio:checked+.cond-lbl.poor{background:var(--red-lt);border-color:var(--red);color:var(--red)}
+.cond-radio:checked+.cond-lbl.eol{background:#fff0f8;border-color:#9D174D;color:#9D174D}
+.cond-radio:checked+.cond-lbl.unk{background:var(--gray-100);border-color:var(--gray-400);color:var(--gray-600)}
+
+/* add btn */
+.add-btn{
+  display:flex;align-items:center;gap:6px;
+  background:var(--blue-2);color:#fff;border:none;
+  border-radius:var(--radius);padding:9px 16px;
+  font-family:var(--sans);font-size:13px;font-weight:500;
+  cursor:pointer;transition:background .12s;white-space:nowrap;
+}
+.add-btn:hover{background:var(--blue)}
+.add-btn.secondary{background:transparent;color:var(--blue-2);border:1px solid var(--blue-2)}
+.add-btn.secondary:hover{background:var(--blue-lt)}
+
+/* submit bar */
+.submit-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px;background:var(--white);
+  border:1px solid var(--gray-200);border-radius:var(--radius);
+  margin-top:20px;gap:12px;flex-wrap:wrap;
+}
+.submit-btn{
+  background:var(--navy);color:#fff;border:none;
+  border-radius:var(--radius);padding:10px 24px;
+  font-family:var(--sans);font-size:14px;font-weight:600;
+  cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;gap:8px;
+}
+.submit-btn:hover{background:#162B52}
+.submit-btn:disabled{background:var(--gray-400);cursor:not-allowed}
+.submit-info{font-size:12px;color:var(--gray-400)}
+
+/* ── Setup Guide tab ── */
+.guide-section{margin-bottom:32px}
+.guide-h{font-size:18px;font-weight:600;color:var(--navy);margin-bottom:12px;
+  display:flex;align-items:center;gap:10px}
+.step-block{
+  display:grid;grid-template-columns:36px 1fr;gap:0;
+  margin-bottom:10px;
+}
+.step-num{
+  font-family:var(--mono);font-size:12px;font-weight:600;
+  color:#fff;background:var(--blue-2);
+  width:28px;height:28px;border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  margin-top:2px;flex-shrink:0;
+}
+.step-content{
+  background:var(--white);border:1px solid var(--gray-200);
+  border-radius:0 var(--radius) var(--radius) 0;
+  border-left:none;padding:10px 14px;margin-left:8px;
+}
+.step-title{font-weight:600;font-size:13px;margin-bottom:4px}
+.step-body{font-size:12px;color:var(--gray-600);line-height:1.6}
+
+.col-table{width:100%;border-collapse:collapse;font-size:12px}
+.col-table th{
+  background:var(--navy);color:#fff;
+  padding:8px 10px;text-align:left;
+  font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;
+}
+.col-table td{padding:8px 10px;border-bottom:1px solid var(--gray-100);vertical-align:top}
+.col-table tr:nth-child(even) td{background:var(--gray-50)}
+.col-type{font-family:var(--mono);font-size:11px;color:var(--blue-2)}
+.col-req{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--red)}
+.callout{
+  border-left:3px solid var(--blue-2);background:var(--blue-lt);
+  padding:12px 14px;border-radius:0 var(--radius) var(--radius) 0;
+  font-size:12px;color:var(--navy);margin:12px 0;line-height:1.6;
+}
+.callout.warn{border-color:var(--amber);background:var(--amber-lt);color:var(--amber)}
+.callout.ok{border-color:var(--teal);background:var(--teal-lt);color:var(--teal)}
+
+/* ── Schema tab ── */
+.schema-wrap{
+  background:var(--navy);border-radius:var(--radius);
+  padding:16px;overflow-x:auto;
+  font-family:var(--mono);font-size:12px;color:#9ECFFF;
+  line-height:1.7;
+  position:relative;
+}
+.schema-wrap .key{color:#79C0FF}
+.schema-wrap .str{color:#A5D6FF}
+.schema-wrap .kw{color:#FF7B72}
+.copy-btn{
+  position:absolute;top:12px;right:12px;
+  background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);
+  border:1px solid rgba(255,255,255,.15);border-radius:4px;
+  font-family:var(--mono);font-size:11px;padding:4px 10px;
+  cursor:pointer;transition:all .15s;
+}
+.copy-btn:hover{background:rgba(255,255,255,.15);color:#fff}
+
+/* ── Connect tab ── */
+.connect-card{
+  background:var(--white);border:1px solid var(--gray-200);
+  border-radius:var(--radius);padding:20px;margin-bottom:16px;
+}
+.connect-label{
+  font-family:var(--mono);font-size:10px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.08em;color:var(--gray-600);
+  margin-bottom:6px;display:block;
+}
+.url-input{
+  font-family:var(--mono);font-size:12px;
+  padding:9px 12px;width:100%;
+  border:1px solid var(--gray-200);border-radius:var(--radius);
+  background:var(--gray-50);color:var(--gray-900);
+  transition:border-color .12s;
+}
+.url-input:focus{outline:none;border-color:var(--blue-2);background:var(--white)}
+.url-input.saved{border-color:var(--teal);background:var(--teal-lt)}
+.btn-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.action-btn{
+  font-family:var(--sans);font-size:13px;font-weight:500;
+  padding:8px 16px;border-radius:var(--radius);cursor:pointer;
+  border:1px solid transparent;transition:all .12s;
+}
+.btn-save{background:var(--blue-2);color:#fff;border-color:var(--blue-2)}
+.btn-save:hover{background:var(--blue)}
+.btn-test{background:var(--teal);color:#fff;border-color:var(--teal)}
+.btn-test:hover{background:#085041}
+.btn-clear{background:transparent;color:var(--gray-600);border-color:var(--gray-200)}
+.btn-clear:hover{background:var(--gray-100)}
+
+.test-result{
+  margin-top:12px;padding:10px 14px;border-radius:var(--radius);
+  font-size:12px;display:none;
+}
+.test-result.ok{background:var(--grn-lt);color:var(--green);border:1px solid #86EFAC}
+.test-result.fail{background:var(--red-lt);color:var(--red);border:1px solid #FCA5A5}
+.test-result.pending{background:var(--blue-lt);color:var(--blue-2);border:1px solid #BFDBFE}
+
+/* ── Toast ── */
+.toast{
+  position:fixed;bottom:20px;right:20px;
+  background:var(--navy);color:#fff;
+  padding:11px 18px;border-radius:var(--radius);
+  font-size:13px;font-weight:500;
+  opacity:0;transform:translateY(8px);
+  transition:all .25s;pointer-events:none;z-index:999;
+  max-width:340px;line-height:1.4;
+}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* ── Submission log ── */
+.log-entry{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:10px 14px;background:var(--white);
+  border:1px solid var(--gray-200);border-radius:var(--radius);
+  margin-bottom:8px;font-size:12px;
+}
+.log-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.log-dot.sent{background:var(--teal)}
+.log-dot.fail{background:var(--red)}
+.log-dot.pending{background:#F59E0B}
+.log-meta{color:var(--gray-400);font-family:var(--mono);font-size:10px;margin-top:2px}
+
+@media(max-width:640px){
+  .fg-2,.fg-3{grid-template-columns:1fr}
+  .fg-full{grid-column:1}
+  .summary-strip{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-badge">HCCAA</div>
+    <div class="topbar-title">Equipment Inventory</div>
+  </div>
+  <div class="topbar-right">
+    <div class="connection-status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Not connected</span>
+    </div>
+  </div>
+</div>
+
+<!-- Tab bar -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('entry',this)">Entry Form</button>
+  <button class="tab" onclick="switchTab('setup',this)">Setup Guide <span class="tab-badge" id="setupBadge">①</span></button>
+  <button class="tab" onclick="switchTab('schema',this)">JSON Schema</button>
+  <button class="tab" onclick="switchTab('connect',this)">Connect <span class="tab-badge" id="connectBadge">②</span></button>
+  <button class="tab" onclick="switchTab('log',this)">Submissions <span class="tab-badge" id="logBadge">0</span></button>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB: ENTRY FORM
+══════════════════════════════════════ -->
+<div class="tab-panel active" id="panel-entry">
+<div class="page">
+
+  <div class="summary-strip">
+    <div class="sum-cell"><div class="sum-val" id="sumTotal">0</div><div class="sum-lbl">Items</div></div>
+    <div class="sum-cell"><div class="sum-val" id="sumComplete" style="color:var(--teal)">0</div><div class="sum-lbl">Complete</div></div>
+    <div class="sum-cell"><div class="sum-val" id="sumSent" style="color:var(--blue-2)">0</div><div class="sum-lbl">Submitted</div></div>
+    <div class="sum-cell"><div class="sum-val" id="sumCenter" style="font-size:13px;font-weight:500;padding-top:5px">—</div><div class="sum-lbl">Center</div></div>
+  </div>
+
+  <!-- Site Info card -->
+  <div class="fcard">
+    <div class="fcard-head" onclick="toggleCard(this)">
+      <div class="fcard-icon" style="background:#EBF2FF">🏢</div>
+      <div class="fcard-title">Site Information</div>
+      <div class="fcard-chevron open">▾</div>
+    </div>
+    <div class="fcard-body open">
+      <div class="fg fg-2">
+        <div class="field">
+          <label>Center Name <span class="req">*</span></label>
+          <select id="centerName" onchange="updateCenter();saveDraft()">
+            <option value="">— Select center —</option>
+            <option>Belton SC</option><option>Cameron FSR Office</option><option>Cameron EHS</option>
+            <option>Cameron - B's Kit</option><option>Cove North</option><option>Copperas Cove SC</option>
+            <option>Cove Sun</option><option>Cove Park</option><option>Ft Hood HS</option>
+            <option>Gatesville HS</option><option>Gatesville SC</option><option>Goldthwaite SC</option>
+            <option>Hamilton SC</option><option>Hamilton HS</option><option>Hillsboro HS</option>
+            <option>Killeen HELP</option><option>Killeen Kitchen</option><option>Kingsland - Winwood</option>
+            <option>Kingsland HS</option><option>Lampasas HS</option><option>Lampasas SC</option>
+            <option>Llano HS</option><option>Llano SC</option><option>Mason SC</option>
+            <option>Mason HS</option><option>Meridian HS</option><option>Mexia EHS</option>
+            <option>Mexia HS</option><option>Rockdale HS</option><option>Rockdale SC</option>
+            <option>San Saba EHS</option><option>Central Office</option><option>San Saba SC</option>
+            <option>Temple HELP</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Center Type</label>
+          <select id="centerType" onchange="saveDraft()">
+            <option value="">— Select type —</option>
+            <option>Senior Center</option><option>Head Start (HS)</option>
+            <option>Early Head Start (EHS)</option><option>HS + EHS Combined</option>
+            <option>Service Center</option><option>Nutrition / Kitchen</option>
+            <option>Admin / FSR Office</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Inspector Name</label>
+          <input type="text" id="inspName" placeholder="Your full name" oninput="saveDraft()">
+        </div>
+        <div class="field">
+          <label>Date</label>
+          <input type="date" id="inspDate" oninput="saveDraft()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category selector -->
+  <div class="fcard">
+    <div class="fcard-head" onclick="toggleCard(this)">
+      <div class="fcard-icon" style="background:#EBF2FF">📂</div>
+      <div class="fcard-title">Equipment Category</div>
+      <div class="fcard-chevron open">▾</div>
+    </div>
+    <div class="fcard-body open">
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+        <button class="freq-lbl" style="border-radius:4px;font-family:var(--sans);font-size:12px" onclick="switchCat('HVAC')"         id="cat-HVAC">❄️ HVAC</button>
+        <button class="freq-lbl" style="border-radius:4px;font-family:var(--sans);font-size:12px" onclick="switchCat('Plumbing')"     id="cat-Plumbing">🔧 Plumbing</button>
+        <button class="freq-lbl" style="border-radius:4px;font-family:var(--sans);font-size:12px" onclick="switchCat('Electrical')"   id="cat-Electrical">⚡ Electrical</button>
+        <button class="freq-lbl" style="border-radius:4px;font-family:var(--sans);font-size:12px" onclick="switchCat('Life Safety')"  id="cat-Life Safety">🚨 Life Safety</button>
+        <button class="freq-lbl" style="border-radius:4px;font-family:var(--sans);font-size:12px" onclick="switchCat('Custodial')"    id="cat-Custodial">🧹 Custodial</button>
+        <button class="freq-lbl" style="border-radius:4px;font-family:var(--sans);font-size:12px" onclick="switchCat('Grounds')"      id="cat-Grounds">🌿 Grounds</button>
+        <button class="freq-lbl" style="border-radius:4px;font-family:var(--sans);font-size:12px" onclick="switchCat('Kitchen')"      id="cat-Kitchen">🍳 Kitchen</button>
+        <button class="freq-lbl" style="border-radius:4px;font-family:var(--sans);font-size:12px" onclick="switchCat('Interior')"     id="cat-Interior">🏠 Interior</button>
+        <button class="freq-lbl" style="border-radius:4px;font-family:var(--sans);font-size:12px" onclick="switchCat('Other')"        id="cat-Other">📦 Other</button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="font-size:12px;color:var(--gray-400)" id="catHint">Select a category, then add items below.</div>
+        <button class="add-btn" onclick="addItem()">+ Add Item</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Item list -->
+  <div class="item-list" id="itemList"></div>
+
+  <!-- Empty state -->
+  <div id="emptyState" style="text-align:center;padding:48px 20px;color:var(--gray-400)">
+    <div style="font-size:36px;margin-bottom:12px">📋</div>
+    <div style="font-size:15px;font-weight:600;color:var(--gray-600);margin-bottom:6px">No items yet</div>
+    <div style="font-size:13px;margin-bottom:20px">Select a center, choose a category, and click Add Item.</div>
+    <button class="add-btn" onclick="addItem()" style="margin:0 auto">+ Add First Item</button>
+  </div>
+
+  <!-- Submit bar -->
+  <div class="submit-bar">
+    <div>
+      <div style="font-weight:600;font-size:13px" id="submitLabel">Ready to submit</div>
+      <div class="submit-info" id="submitInfo">Items will POST to your Power Automate flow and appear in the SharePoint list.</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="add-btn secondary" onclick="saveDraft()">💾 Save Draft</button>
+      <button class="submit-btn" id="submitBtn" onclick="submitAll()">
+        <span>Submit All Items</span>
+      </button>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB: SETUP GUIDE
+══════════════════════════════════════ -->
+<div class="tab-panel" id="panel-setup">
+<div class="page">
+
+  <div style="margin-bottom:28px">
+    <div style="font-size:22px;font-weight:600;color:var(--navy);margin-bottom:6px">Setup Guide</div>
+    <div style="font-size:13px;color:var(--gray-600)">Three steps. ~10 minutes total. Do this once, then the form works for everyone.</div>
+  </div>
+
+  <div class="callout">
+    <strong>How it works:</strong> The form POSTs JSON to a Power Automate HTTP trigger. The flow catches it and creates a new item in your SharePoint list. Staff never sign in to anything — they just fill out the form and hit Submit.
+  </div>
+
+  <!-- Step 1 -->
+  <div class="guide-section" style="margin-top:24px">
+    <div class="guide-h"><span style="background:var(--navy);color:#fff;width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:600;flex-shrink:0">1</span> Create the SharePoint List</div>
+
+    <div class="step-block">
+      <div class="step-num">a</div>
+      <div class="step-content">
+        <div class="step-title">Go to your Facilities SharePoint site → click + New → List → Blank list</div>
+        <div class="step-body">Name it: <strong>Equipment Inventory</strong>. Description: Master inventory of all HCCAA center equipment. Toggle "Show in site navigation" ON.</div>
+      </div>
+    </div>
+    <div class="step-block">
+      <div class="step-num">b</div>
+      <div class="step-content">
+        <div class="step-title">Rename the default 'Title' column to 'Equipment Name'</div>
+        <div class="step-body">Click the Title column header → Column settings → Rename → type Equipment Name → Save.</div>
+      </div>
+    </div>
+    <div class="step-block">
+      <div class="step-num">c</div>
+      <div class="step-content">
+        <div class="step-title">Add all columns below using '+ Add column'</div>
+        <div class="step-body">Click + Add column at the far right of the list header. Add each row in the table in order — the order controls how they appear in the SharePoint form.</div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;overflow-x:auto">
+      <table class="col-table">
+        <thead><tr><th>Column Name</th><th>Type</th><th>Req</th><th>Options / Notes</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Equipment Name</strong></td><td class="col-type">Single line</td><td class="col-req">YES</td><td>Already exists (renamed Title). No changes needed.</td></tr>
+          <tr><td>Center Name</td><td class="col-type">Choice</td><td class="col-req">YES</td><td>Add all 34 centers. Dropdown. Allow manual entry OFF.</td></tr>
+          <tr><td>Center Type</td><td class="col-type">Choice</td><td></td><td>Senior Center, Head Start, EHS, HS+EHS, Service Center, Nutrition, Admin/FSR</td></tr>
+          <tr><td>Equipment Category</td><td class="col-type">Choice</td><td class="col-req">YES</td><td>HVAC, Plumbing, Electrical, Life Safety, Custodial, Grounds, Kitchen, Interior, Other</td></tr>
+          <tr><td>Manufacturer</td><td class="col-type">Single line</td><td></td><td></td></tr>
+          <tr><td>Model Number</td><td class="col-type">Single line</td><td></td><td></td></tr>
+          <tr><td>Serial Number</td><td class="col-type">Single line</td><td></td><td></td></tr>
+          <tr><td>Year</td><td class="col-type">Single line</td><td></td><td>e.g. "2018" or "~10 years"</td></tr>
+          <tr><td>Location</td><td class="col-type">Single line</td><td class="col-req">YES</td><td>Where on the property</td></tr>
+          <tr><td>Quantity</td><td class="col-type">Number</td><td></td><td>Default value: 1</td></tr>
+          <tr><td>Condition</td><td class="col-type">Choice</td><td></td><td>Good, Fair, Poor, End of Life, Unknown</td></tr>
+          <tr><td>Maintenance Frequency</td><td class="col-type">Choice</td><td class="col-req">YES</td><td>Weekly, Monthly, Quarterly, Semi-Annual, Annual, As Needed</td></tr>
+          <tr><td>Last Service Date</td><td class="col-type">Date only</td><td></td><td></td></tr>
+          <tr><td>Next Due Date</td><td class="col-type">Date only</td><td></td><td></td></tr>
+          <tr><td>Warranty Expiry</td><td class="col-type">Date only</td><td></td><td></td></tr>
+          <tr><td>Vendor Contractor</td><td class="col-type">Single line</td><td></td><td></td></tr>
+          <tr><td>Work Order Status</td><td class="col-type">Choice</td><td></td><td>None Needed, Scheduled ≤30 Days, Urgent ≤1 Week, Immediate Safety</td></tr>
+          <tr><td>Inspector Name</td><td class="col-type">Single line</td><td></td><td></td></tr>
+          <tr><td>Notes</td><td class="col-type">Multi-line text</td><td></td><td>Plain text</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="guide-section">
+    <div class="guide-h"><span style="background:var(--blue-2);color:#fff;width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:600;flex-shrink:0">2</span> Build the Power Automate Flow</div>
+
+    <div class="step-block">
+      <div class="step-num">a</div>
+      <div class="step-content">
+        <div class="step-title">Go to make.powerautomate.com → Create → Instant cloud flow</div>
+        <div class="step-body">Name it: <strong>HCCAA Equipment Inventory — HTTP to SharePoint</strong>. For trigger, search and select <strong>"When an HTTP request is received"</strong>. Click Create.</div>
+      </div>
+    </div>
+    <div class="step-block">
+      <div class="step-num">b</div>
+      <div class="step-content">
+        <div class="step-title">In the trigger step, click 'Use sample payload to generate schema'</div>
+        <div class="step-body">Go to the <strong>JSON Schema</strong> tab in this form, copy the full schema, paste it into the field, and click Done. The trigger will auto-configure all the fields.</div>
+      </div>
+    </div>
+    <div class="step-block">
+      <div class="step-num">c</div>
+      <div class="step-content">
+        <div class="step-title">Click '+ New step' → search 'SharePoint' → select 'Create item'</div>
+        <div class="step-body">
+          <strong>Site Address:</strong> https://hccaainc.sharepoint.com/sites/HCCAAFacilities<br>
+          <strong>List Name:</strong> Equipment Inventory<br>
+          Then map each field: click the value box → select the matching dynamic content from the HTTP trigger body.
+        </div>
+      </div>
+    </div>
+    <div class="step-block">
+      <div class="step-num">d</div>
+      <div class="step-content">
+        <div class="step-title">Save the flow → copy the HTTP POST URL from the trigger step</div>
+        <div class="step-body">After saving, the trigger step shows a long URL starting with <code style="font-family:var(--mono);font-size:11px">https://prod-…logic.azure.com/workflows/…</code>. Copy the whole thing.</div>
+      </div>
+    </div>
+
+    <div class="callout warn" style="margin-top:12px">
+      <strong>Field mapping tip:</strong> In the Create item step, the SharePoint column names must match exactly. If your column is "Equipment Name" the dynamic content token will be named "EquipmentName" (no space). Match them one by one down the list.
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="guide-section">
+    <div class="guide-h"><span style="background:var(--teal);color:#fff;width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:600;flex-shrink:0">3</span> Connect the Form</div>
+    <div class="step-block">
+      <div class="step-num">a</div>
+      <div class="step-content">
+        <div class="step-title">Go to the Connect tab in this form</div>
+        <div class="step-body">Paste the HTTP POST URL from Power Automate into the URL field → click Save URL. The status indicator at the top will turn green once the connection is verified.</div>
+      </div>
+    </div>
+    <div class="step-block">
+      <div class="step-num">b</div>
+      <div class="step-content">
+        <div class="step-title">Click 'Send Test Record' to verify the flow is working</div>
+        <div class="step-body">This sends a test item to your SharePoint list. Open the list and confirm the test row appeared. Then delete it from SharePoint before distributing the form to staff.</div>
+      </div>
+    </div>
+    <div class="callout ok" style="margin-top:12px">
+      <strong>Done.</strong> Share the saved HTML file with facilities staff via email, Teams, or a shared drive. They open it in any browser, fill it out, and click Submit — no login, no SharePoint access needed.
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB: JSON SCHEMA
+══════════════════════════════════════ -->
+<div class="tab-panel" id="panel-schema">
+<div class="page">
+  <div style="margin-bottom:20px">
+    <div style="font-size:22px;font-weight:600;color:var(--navy);margin-bottom:6px">JSON Schema</div>
+    <div style="font-size:13px;color:var(--gray-600)">Paste this into the Power Automate HTTP trigger → "Use sample payload to generate schema" field.</div>
+  </div>
+
+  <div class="callout" style="margin-bottom:16px">
+    In your Power Automate flow, click the HTTP trigger step → click <strong>"Use sample payload to generate schema"</strong> → paste the entire block below → click Done. Power Automate will generate the JSON schema automatically from this sample.
+  </div>
+
+  <div class="schema-wrap" id="schemaBlock">
+    <button class="copy-btn" onclick="copySchema()">Copy</button>
+    <pre id="schemaText"></pre>
+  </div>
+
+  <div style="margin-top:20px">
+    <div style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:10px">Field Reference</div>
+    <div style="overflow-x:auto">
+      <table class="col-table">
+        <thead><tr><th>JSON Field</th><th>SharePoint Column</th><th>Type</th></tr></thead>
+        <tbody id="fieldRef"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB: CONNECT
+══════════════════════════════════════ -->
+<div class="tab-panel" id="panel-connect">
+<div class="page">
+  <div style="margin-bottom:24px">
+    <div style="font-size:22px;font-weight:600;color:var(--navy);margin-bottom:6px">Connect to Power Automate</div>
+    <div style="font-size:13px;color:var(--gray-600)">Paste your HTTP trigger URL here. The URL is saved in this browser so staff don't need to set it up again.</div>
+  </div>
+
+  <div class="connect-card">
+    <span class="connect-label">Power Automate HTTP POST URL</span>
+    <input class="url-input" type="url" id="flowUrl"
+      placeholder="https://prod-xx.westus.logic.azure.com/workflows/…"
+      oninput="checkUrl()">
+    <div class="btn-row">
+      <button class="action-btn btn-save" onclick="saveUrl()">Save URL</button>
+      <button class="action-btn btn-test" onclick="sendTest()">Send Test Record</button>
+      <button class="action-btn btn-clear" onclick="clearUrl()">Clear</button>
+    </div>
+    <div class="test-result" id="testResult"></div>
+  </div>
+
+  <div class="connect-card">
+    <span class="connect-label">Connection Status</span>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+      <div class="status-dot" id="connectDot"></div>
+      <div style="font-size:13px" id="connectMsg">No URL saved yet.</div>
+    </div>
+    <div style="font-size:12px;color:var(--gray-400);margin-top:8px" id="savedUrlDisplay"></div>
+  </div>
+
+  <div class="callout">
+    <strong>Where to find the URL:</strong> In Power Automate, open your flow → click the "When an HTTP request is received" trigger step → after saving the flow, the HTTP POST URL appears at the bottom of that step. It's a long URL starting with <code style="font-family:var(--mono);font-size:11px">https://prod-</code>
+  </div>
+
+  <div style="margin-top:20px">
+    <div style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:10px">Distribute to Staff</div>
+    <div class="callout ok">
+      Once the URL is saved and the test passes: save this HTML file (File → Save As in your browser, or right-click → Save Page As) and share that saved file with facilities staff via email, Teams, or a shared network drive. The URL is embedded in the saved file — staff just open it and start submitting.
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB: SUBMISSIONS LOG
+══════════════════════════════════════ -->
+<div class="tab-panel" id="panel-log">
+<div class="page">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+    <div>
+      <div style="font-size:22px;font-weight:600;color:var(--navy);margin-bottom:4px">Submission Log</div>
+      <div style="font-size:13px;color:var(--gray-600)">Records of items submitted from this browser session.</div>
+    </div>
+    <button class="action-btn btn-clear" onclick="clearLog()" style="font-size:12px">Clear Log</button>
+  </div>
+  <div id="logList"><div style="text-align:center;padding:40px;color:var(--gray-400);font-size:13px">No submissions yet this session.</div></div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────
+const CATS = {
+  'HVAC':        {icon:'❄️', suggestions:['Rooftop Unit','Split System / Mini-Split','Air Handler (AHU)','Exhaust Fan','Heat Pump','Thermostat','Packaged Unit']},
+  'Plumbing':    {icon:'🔧', suggestions:['Water Heater','Restroom Faucet','Flush Valve / Toilet','Floor Drain','Backflow Preventer','Grease Trap','Kitchen Sink','Mop Sink']},
+  'Electrical':  {icon:'⚡', suggestions:['Main Electrical Panel','Sub-Panel','GFCI Outlets','Emergency Exit Light','Exit Sign','Exterior Lighting','Surge Protector / UPS']},
+  'Life Safety': {icon:'🚨', suggestions:['Fire Extinguisher','Smoke Detector','CO Detector','Fire Alarm Panel','Sprinkler Zone','AED (Defibrillator)','First Aid Kit','Emergency Eyewash']},
+  'Custodial':   {icon:'🧹', suggestions:['Commercial Vacuum','Floor Scrubber / Buffer','Mop Bucket & Wringer','Restroom Dispenser','Janitorial Cart']},
+  'Grounds':     {icon:'🌿', suggestions:['Riding Mower','Walk-Behind Mower','String Trimmer','Irrigation Controller','Irrigation Zone','Playground Equipment','Parking Lot','Fence / Gate']},
+  'Kitchen':     {icon:'🍳', suggestions:['Commercial Refrigerator','Commercial Freezer','Range / Oven','Commercial Dishwasher','Exhaust Hood System','Food Prep Table','Hand-Wash Sink']},
+  'Interior':    {icon:'🏠', suggestions:['Roof','Ceiling Tiles','Interior Doors','Exterior Doors','Windows','Flooring','ADA Ramps / Handrails','Gutters & Downspouts']},
+  'Other':       {icon:'📦', suggestions:[]},
+};
+
+const FIELDS = [
+  {key:'EquipmentName',     label:'Equipment Name',     spCol:'Equipment Name',     type:'string'},
+  {key:'CenterName',        label:'Center Name',        spCol:'Center Name',        type:'string'},
+  {key:'CenterType',        label:'Center Type',        spCol:'Center Type',        type:'string'},
+  {key:'EquipmentCategory', label:'Equipment Category', spCol:'Equipment Category', type:'string'},
+  {key:'Manufacturer',      label:'Manufacturer',       spCol:'Manufacturer',       type:'string'},
+  {key:'ModelNumber',       label:'Model Number',       spCol:'Model Number',       type:'string'},
+  {key:'SerialNumber',      label:'Serial Number',      spCol:'Serial Number',      type:'string'},
+  {key:'Year',              label:'Year',               spCol:'Year',               type:'string'},
+  {key:'Location',          label:'Location',           spCol:'Location',           type:'string'},
+  {key:'Quantity',          label:'Quantity',           spCol:'Quantity',           type:'number'},
+  {key:'Condition',         label:'Condition',          spCol:'Condition',          type:'string'},
+  {key:'MaintenanceFrequency', label:'Maintenance Frequency', spCol:'Maintenance Frequency', type:'string'},
+  {key:'LastServiceDate',   label:'Last Service Date',  spCol:'Last Service Date',  type:'string'},
+  {key:'NextDueDate',       label:'Next Due Date',      spCol:'Next Due Date',      type:'string'},
+  {key:'WarrantyExpiry',    label:'Warranty Expiry',    spCol:'Warranty Expiry',    type:'string'},
+  {key:'VendorContractor',  label:'Vendor / Contractor',spCol:'Vendor Contractor',  type:'string'},
+  {key:'WorkOrderStatus',   label:'Work Order Status',  spCol:'Work Order Status',  type:'string'},
+  {key:'InspectorName',     label:'Inspector Name',     spCol:'Inspector Name',     type:'string'},
+  {key:'Notes',             label:'Notes',              spCol:'Notes',              type:'string'},
+];
+
+let items = {};
+let currentCat = 'HVAC';
+let nextId = 1;
+let submissionLog = [];
+let centerName = '';
+Object.keys(CATS).forEach(c => items[c] = []);
+
+// ── Tab switching ─────────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'schema') renderSchema();
+  if (name === 'log') renderLog();
+}
+
+// ── Card toggle ───────────────────────────────────────────────────
+function toggleCard(head) {
+  const body = head.nextElementSibling;
+  const chev = head.querySelector('.fcard-chevron');
+  const open = body.classList.toggle('open');
+  chev.classList.toggle('open', open);
+}
+
+// ── Category switching ────────────────────────────────────────────
+function switchCat(cat) {
+  currentCat = cat;
+  document.querySelectorAll('[id^="cat-"]').forEach(b => {
+    b.style.background = b.id === 'cat-' + cat ? 'var(--navy)' : '';
+    b.style.color      = b.id === 'cat-' + cat ? '#fff' : '';
+    b.style.borderColor= b.id === 'cat-' + cat ? 'var(--navy)' : '';
+  });
+  document.getElementById('catHint').textContent =
+    `Showing ${cat} items. Click + Add Item to add a piece of equipment in this category.`;
+  renderItems();
+}
+
+// ── Item CRUD ─────────────────────────────────────────────────────
+function addItem() {
+  if (!centerName) { toast('⚠️ Please select a center first'); return; }
+  const id = 'item_' + (nextId++);
+  items[currentCat].push({
+    id, category: currentCat,
+    name:'', manufacturer:'', model:'', serial:'', year:'',
+    location:'', quantity:'1', condition:'', frequency:'',
+    lastService:'', nextDue:'', warranty:'', vendor:'', workOrder:'', notes:'',
+  });
+  renderItems();
+  updateSummary();
+  saveDraft();
+  setTimeout(() => {
+    const el = document.getElementById('body-' + id);
+    if (el) { el.classList.add('open'); el.scrollIntoView({behavior:'smooth', block:'nearest'}); }
+  }, 30);
+}
+
+function removeItem(id) {
+  for (const c of Object.keys(items)) items[c] = items[c].filter(i => i.id !== id);
+  renderItems(); updateSummary(); saveDraft();
+}
+
+function dupItem(id) {
+  for (const c of Object.keys(items)) {
+    const src = items[c].find(i => i.id === id);
+    if (!src) continue;
+    const copy = {...src, id:'item_'+(nextId++), name:src.name+' (copy)', serial:''};
+    items[c].push(copy);
+    break;
+  }
+  renderItems(); updateSummary(); saveDraft();
+  toast('Item duplicated');
+}
+
+function setField(id, field, val) {
+  for (const c of Object.keys(items)) {
+    const item = items[c].find(i => i.id === id);
+    if (!item) continue;
+    item[field] = val;
+    break;
+  }
+  updateSummary(); saveDraft();
+  // Update card name + state live
+  const head = document.getElementById('head-' + id);
+  if (head) {
+    const item = Object.values(items).flat().find(i => i.id === id);
+    if (!item) return;
+    const nameEl = head.querySelector('.item-name');
+    if (nameEl) { nameEl.textContent = item.name || 'Tap to fill in details…'; nameEl.className = 'item-name' + (item.name ? '' : ' empty'); }
+    const dot = head.querySelector('.item-dot');
+    if (dot) { dot.className = 'item-dot' + (isComplete(item) ? ' ok' : isPartial(item) ? ' partial' : ''); }
+    const card = head.closest('.item-card');
+    if (card) { card.className = 'item-card' + (isComplete(item) ? ' complete' : isPartial(item) ? ' partial' : ''); }
+  }
+}
+
+const isComplete = i => !!(i.name && i.location && i.frequency);
+const isPartial  = i => !!(i.name || i.manufacturer || i.location);
+
+// ── Render items ──────────────────────────────────────────────────
+function renderItems() {
+  const list = document.getElementById('itemList');
+  const empty = document.getElementById('emptyState');
+  const catItems = items[currentCat];
+  list.innerHTML = '';
+  if (catItems.length === 0) { empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  catItems.forEach((item, idx) => list.appendChild(buildItemCard(item, idx)));
+}
+
+function buildItemCard(item, idx) {
+  const sugs = CATS[item.category].suggestions;
+  const sugList = sugs.length ? `<datalist id="sug-${item.id}">${sugs.map(s=>`<option value="${s}">`).join('')}</datalist>` : '';
+  const freqs = ['Weekly','Monthly','Quarterly','Semi-Annual','Annual','As Needed'];
+  const freqHtml = freqs.map(f =>
+    `<input type="radio" name="freq_${item.id}" id="fr_${item.id}_${f.replace(/ /g,'_')}" value="${f}" class="freq-radio" ${item.frequency===f?'checked':''} onchange="setField('${item.id}','frequency','${f}')">
+     <label for="fr_${item.id}_${f.replace(/ /g,'_')}" class="freq-lbl" style="border-radius:4px;font-size:11px">${f}</label>`).join('');
+  const conds = [['Good','good'],['Fair','fair'],['Poor','poor'],['End of Life','eol'],['Unknown','unk']];
+  const condHtml = conds.map(([v,cls]) =>
+    `<input type="radio" name="cond_${item.id}" id="cn_${item.id}_${cls}" value="${v}" class="cond-radio" ${item.condition===v?'checked':''} onchange="setField('${item.id}','condition','${v}')">
+     <label for="cn_${item.id}_${cls}" class="cond-lbl ${cls}">${v}</label>`).join('');
+
+  const div = document.createElement('div');
+  div.className = 'item-card' + (isComplete(item)?' complete':isPartial(item)?' partial':'');
+  div.innerHTML = `${sugList}
+    <div class="item-head" id="head-${item.id}" onclick="toggleItem('${item.id}')">
+      <span class="item-num">${String(idx+1).padStart(2,'0')}</span>
+      <span class="item-name${item.name?'':' empty'}">${item.name||'Tap to fill in details…'}</span>
+      <span class="item-dot${isComplete(item)?' ok':isPartial(item)?' partial':''}"></span>
+      <div class="item-actions" onclick="event.stopPropagation()">
+        <button class="icon-btn" onclick="dupItem('${item.id}')" title="Duplicate">⧉</button>
+        <button class="icon-btn del" onclick="removeItem('${item.id}')" title="Remove">✕</button>
+      </div>
+    </div>
+    <div class="item-body" id="body-${item.id}">
+      <div class="fg fg-2" style="margin-bottom:12px">
+        <div class="field fg-full">
+          <label>Equipment Name <span class="req">*</span></label>
+          <input type="text" list="sug-${item.id}" value="${esc(item.name)}" placeholder="e.g. Rooftop Unit #1, Water Heater #2…"
+            oninput="setField('${item.id}','name',this.value)">
+        </div>
+        <div class="field"><label>Manufacturer</label>
+          <input type="text" value="${esc(item.manufacturer)}" placeholder="e.g. Carrier, Rheem"
+            oninput="setField('${item.id}','manufacturer',this.value)"></div>
+        <div class="field"><label>Model Number</label>
+          <input type="text" value="${esc(item.model)}" placeholder="From nameplate"
+            oninput="setField('${item.id}','model',this.value)"></div>
+        <div class="field"><label>Serial Number</label>
+          <input type="text" value="${esc(item.serial)}" placeholder="From nameplate"
+            oninput="setField('${item.id}','serial',this.value)"></div>
+        <div class="field"><label>Year / Age</label>
+          <input type="text" value="${esc(item.year)}" placeholder="e.g. 2018 or ~8 years"
+            oninput="setField('${item.id}','year',this.value)"></div>
+      </div>
+      <div class="fg fg-3" style="margin-bottom:12px">
+        <div class="field"><label>Location on Site <span class="req">*</span></label>
+          <input type="text" value="${esc(item.location)}" placeholder="e.g. Roof, Utility Room"
+            oninput="setField('${item.id}','location',this.value)"></div>
+        <div class="field"><label>Quantity</label>
+          <input type="number" min="1" value="${esc(item.quantity)||1}"
+            oninput="setField('${item.id}','quantity',this.value)"></div>
+        <div class="field"><label>Vendor / Contractor</label>
+          <input type="text" value="${esc(item.vendor)}" placeholder="Company + phone"
+            oninput="setField('${item.id}','vendor',this.value)"></div>
+      </div>
+      <div class="field" style="margin-bottom:12px">
+        <label>Condition</label>
+        <div class="cond-wrap">${condHtml}</div>
+      </div>
+      <div class="field" style="margin-bottom:12px">
+        <label>Maintenance Frequency <span class="req">*</span></label>
+        <div class="freq-wrap">${freqHtml}</div>
+      </div>
+      <div class="fg fg-3" style="margin-bottom:12px">
+        <div class="field"><label>Last Service Date</label>
+          <input type="date" value="${esc(item.lastService)}"
+            oninput="setField('${item.id}','lastService',this.value)"></div>
+        <div class="field"><label>Next Due Date</label>
+          <input type="date" value="${esc(item.nextDue)}"
+            oninput="setField('${item.id}','nextDue',this.value)"></div>
+        <div class="field"><label>Warranty Expiry</label>
+          <input type="date" value="${esc(item.warranty)}"
+            oninput="setField('${item.id}','warranty',this.value)"></div>
+      </div>
+      <div class="fg fg-2">
+        <div class="field">
+          <label>Work Order Status</label>
+          <select onchange="setField('${item.id}','workOrder',this.value)">
+            <option value="">— Select —</option>
+            <option ${item.workOrder==='None Needed'?'selected':''}>None Needed</option>
+            <option ${item.workOrder==='Scheduled ≤30 Days'?'selected':''}>Scheduled ≤30 Days</option>
+            <option ${item.workOrder==='Urgent ≤1 Week'?'selected':''}>Urgent ≤1 Week</option>
+            <option ${item.workOrder==='Immediate Safety Concern'?'selected':''}>Immediate Safety Concern</option>
+          </select>
+        </div>
+        <div class="field fg-full"><label>Notes</label>
+          <textarea placeholder="Filter sizes, tonnage, access instructions, recent repairs…"
+            oninput="setField('${item.id}','notes',this.value)">${esc(item.notes)}</textarea>
+        </div>
+      </div>
+    </div>`;
+  return div;
+}
+
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function toggleItem(id) {
+  const body = document.getElementById('body-' + id);
+  if (body) body.classList.toggle('open');
+}
+
+// ── Summary ───────────────────────────────────────────────────────
+function updateSummary() {
+  const all = Object.values(items).flat();
+  const complete = all.filter(isComplete).length;
+  document.getElementById('sumTotal').textContent    = all.length;
+  document.getElementById('sumComplete').textContent = complete;
+  document.getElementById('emptyState').style.display = all.length ? 'none' : '';
+  const cats = Object.values(items).filter(a => a.length > 0).length;
+  // Update log badge
+  document.getElementById('logBadge').textContent = submissionLog.length;
+}
+
+function updateCenter() {
+  centerName = document.getElementById('centerName').value;
+  document.getElementById('sumCenter').textContent = centerName || '—';
+}
+
+// ── Submit all ────────────────────────────────────────────────────
+async function submitAll() {
+  const url = getUrl();
+  if (!url) { toast('⚠️ No Power Automate URL set — go to the Connect tab'); switchTabByName('connect'); return; }
+  const all = Object.values(items).flat();
+  if (all.length === 0) { toast('⚠️ No items to submit'); return; }
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.querySelector('span').textContent = 'Submitting…';
+
+  let sent = 0, failed = 0;
+  for (const item of all) {
+    const payload = buildPayload(item);
+    try {
+      const res = await fetch(url, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+      });
+      if (res.ok || res.status === 202) {
+        logEntry(item, 'sent');
+        sent++;
+      } else {
+        logEntry(item, 'fail', `HTTP ${res.status}`);
+        failed++;
+      }
+    } catch(e) {
+      logEntry(item, 'fail', e.message);
+      failed++;
+    }
+  }
+
+  btn.disabled = false; btn.querySelector('span').textContent = 'Submit All Items';
+  document.getElementById('sumSent').textContent = sent;
+  updateSummary();
+
+  if (failed === 0) {
+    toast(`✅ ${sent} item${sent!==1?'s':''} submitted to SharePoint successfully`);
+    // Clear submitted items
+    Object.keys(items).forEach(c => items[c] = []);
+    renderItems(); updateSummary();
+  } else {
+    toast(`⚠️ ${sent} sent, ${failed} failed — check the Submissions tab for details`);
+  }
+}
+
+function buildPayload(item) {
+  const center = document.getElementById('centerName').value;
+  const ctype  = document.getElementById('centerType').value;
+  const iname  = document.getElementById('inspName').value;
+  return {
+    EquipmentName:      item.name,
+    CenterName:         center,
+    CenterType:         ctype,
+    EquipmentCategory:  item.category,
+    Manufacturer:       item.manufacturer,
+    ModelNumber:        item.model,
+    SerialNumber:       item.serial,
+    Year:               item.year,
+    Location:           item.location,
+    Quantity:           parseInt(item.quantity)||1,
+    Condition:          item.condition,
+    MaintenanceFrequency: item.frequency,
+    LastServiceDate:    item.lastService,
+    NextDueDate:        item.nextDue,
+    WarrantyExpiry:     item.warranty,
+    VendorContractor:   item.vendor,
+    WorkOrderStatus:    item.workOrder,
+    InspectorName:      iname,
+    Notes:              item.notes,
+  };
+}
+
+// ── Schema ────────────────────────────────────────────────────────
+function buildSamplePayload() {
+  return {
+    EquipmentName:       "Rooftop Unit #1",
+    CenterName:          "Belton SC",
+    CenterType:          "Senior Center",
+    EquipmentCategory:   "HVAC",
+    Manufacturer:        "Carrier",
+    ModelNumber:         "48XL036-060",
+    SerialNumber:        "1234ABC",
+    Year:                "2015",
+    Location:            "Roof - South Side",
+    Quantity:            1,
+    Condition:           "Fair",
+    MaintenanceFrequency:"Quarterly",
+    LastServiceDate:     "2026-02-15",
+    NextDueDate:         "2026-05-15",
+    WarrantyExpiry:      "",
+    VendorContractor:    "ABC HVAC Services 254-555-0100",
+    WorkOrderStatus:     "None Needed",
+    InspectorName:       "Jane Smith",
+    Notes:               "Filter size 20x25x1. Belt showing wear - check next visit.",
+  };
+}
+
+function renderSchema() {
+  const sample = buildSamplePayload();
+  document.getElementById('schemaText').textContent = JSON.stringify(sample, null, 2);
+  const tbody = document.getElementById('fieldRef');
+  tbody.innerHTML = FIELDS.map((f,i) =>
+    `<tr><td><code style="font-family:var(--mono);font-size:11px">${f.key}</code></td><td>${f.spCol}</td><td class="col-type">${f.type}</td></tr>`
+  ).join('');
+}
+
+function copySchema() {
+  const sample = buildSamplePayload();
+  navigator.clipboard.writeText(JSON.stringify(sample, null, 2))
+    .then(() => toast('✅ Sample payload copied to clipboard'))
+    .catch(() => toast('Select the text and copy manually'));
+}
+
+// ── Connect / URL management ──────────────────────────────────────
+function getUrl() {
+  try { return localStorage.getItem('hccaa_flow_url') || ''; } catch(e){ return ''; }
+}
+function saveUrl() {
+  const url = document.getElementById('flowUrl').value.trim();
+  if (!url.startsWith('http')) { toast('⚠️ URL must start with https://'); return; }
+  try {
+    localStorage.setItem('hccaa_flow_url', url);
+    document.getElementById('flowUrl').className = 'url-input saved';
+    updateConnectionUI(true, url);
+    toast('✅ URL saved — click Send Test Record to verify');
+    document.getElementById('connectBadge').className = 'tab-badge ok';
+    document.getElementById('connectBadge').textContent = '✓';
+  } catch(e){ toast('Could not save — localStorage unavailable'); }
+}
+function clearUrl() {
+  try { localStorage.removeItem('hccaa_flow_url'); } catch(e){}
+  document.getElementById('flowUrl').value = '';
+  document.getElementById('flowUrl').className = 'url-input';
+  updateConnectionUI(false);
+  document.getElementById('connectBadge').className = 'tab-badge';
+  document.getElementById('connectBadge').textContent = '②';
+}
+function checkUrl() {
+  const v = document.getElementById('flowUrl').value;
+  document.getElementById('flowUrl').className = 'url-input' + (v.startsWith('http') ? '' : '');
+}
+function updateConnectionUI(connected, url) {
+  const dot  = document.getElementById('statusDot');
+  const txt  = document.getElementById('statusText');
+  const cdot = document.getElementById('connectDot');
+  const cmsg = document.getElementById('connectMsg');
+  const disp = document.getElementById('savedUrlDisplay');
+  if (connected) {
+    dot.className = 'status-dot connected'; txt.textContent = 'Connected';
+    cdot.className = 'status-dot connected'; cmsg.textContent = 'Flow URL saved. Ready to submit.';
+    disp.textContent = url ? url.substring(0,60) + '…' : '';
+  } else {
+    dot.className = 'status-dot'; txt.textContent = 'Not connected';
+    cdot.className = 'status-dot'; cmsg.textContent = 'No URL saved yet.';
+    disp.textContent = '';
+  }
+}
+
+async function sendTest() {
+  const url = getUrl() || document.getElementById('flowUrl').value.trim();
+  if (!url) { toast('⚠️ Enter the URL first'); return; }
+  const resultEl = document.getElementById('testResult');
+  resultEl.style.display = 'block';
+  resultEl.className = 'test-result pending';
+  resultEl.textContent = '⏳ Sending test record to Power Automate…';
+  const payload = buildSamplePayload();
+  payload.EquipmentName = 'TEST RECORD — DELETE ME';
+  payload.Notes = 'This is an automated test from the HCCAA Inventory Form. Please delete this record from SharePoint.';
+  try {
+    const res = await fetch(url, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    if (res.ok || res.status === 202) {
+      resultEl.className = 'test-result ok';
+      resultEl.textContent = '✅ Test record sent successfully (HTTP ' + res.status + '). Check your SharePoint list — a row named "TEST RECORD — DELETE ME" should appear within 30 seconds. Delete it before going live.';
+      saveUrl();
+    } else {
+      resultEl.className = 'test-result fail';
+      resultEl.textContent = '✗ Request failed: HTTP ' + res.status + '. Double-check the URL and that the flow is turned on in Power Automate.';
+    }
+  } catch(e) {
+    resultEl.className = 'test-result fail';
+    resultEl.textContent = '✗ Could not reach the URL: ' + e.message + '. Check that the URL is correct and the flow is enabled.';
+  }
+}
+
+function switchTabByName(name) {
+  const tabs = document.querySelectorAll('.tab');
+  const map = {entry:0,setup:1,schema:2,connect:3,log:4};
+  if (map[name] !== undefined) switchTab(name, tabs[map[name]]);
+}
+
+// ── Submission log ────────────────────────────────────────────────
+function logEntry(item, status, error) {
+  submissionLog.unshift({
+    name: item.name || 'Unnamed',
+    category: item.category,
+    center: document.getElementById('centerName').value,
+    status, error,
+    time: new Date().toLocaleTimeString(),
+  });
+  document.getElementById('logBadge').textContent = submissionLog.length;
+}
+function renderLog() {
+  const el = document.getElementById('logList');
+  if (!submissionLog.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400);font-size:13px">No submissions yet this session.</div>'; return; }
+  el.innerHTML = submissionLog.map(e => `
+    <div class="log-entry">
+      <div class="log-dot ${e.status}"></div>
+      <div>
+        <div style="font-weight:500;font-size:13px">${e.name}</div>
+        <div class="log-meta">${e.time} · ${e.category} · ${e.center} · ${e.status.toUpperCase()}${e.error ? ' — ' + e.error : ''}</div>
+      </div>
+    </div>`).join('');
+}
+function clearLog() { submissionLog = []; renderLog(); document.getElementById('logBadge').textContent = '0'; }
+
+// ── Draft save / load ─────────────────────────────────────────────
+function saveDraft() {
+  try {
+    const center = document.getElementById('centerName').value;
+    const ctype  = document.getElementById('centerType').value;
+    const iname  = document.getElementById('inspName').value;
+    const idate  = document.getElementById('inspDate').value;
+    localStorage.setItem('hccaa_inv2_draft', JSON.stringify({items, nextId, currentCat, center, ctype, iname, idate}));
+  } catch(e){}
+}
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem('hccaa_inv2_draft');
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d.items) items = d.items;
+    if (d.nextId) nextId = d.nextId;
+    if (d.center) { document.getElementById('centerName').value = d.center; centerName = d.center; }
+    if (d.ctype)  document.getElementById('centerType').value = d.ctype;
+    if (d.iname)  document.getElementById('inspName').value   = d.iname;
+    if (d.idate)  document.getElementById('inspDate').value   = d.idate;
+    if (d.currentCat) switchCat(d.currentCat); else switchCat('HVAC');
+    updateCenter(); updateSummary();
+    const total = Object.values(items).flat().length;
+    if (total > 0) toast(`Draft restored — ${total} item${total!==1?'s':''} loaded`);
+  } catch(e){}
+}
+
+// ── Toast ─────────────────────────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+document.getElementById('inspDate').valueAsDate = new Date();
+switchCat('HVAC');
+updateSummary();
+
+const saved = getUrl();
+if (saved) {
+  document.getElementById('flowUrl').value = saved;
+  document.getElementById('flowUrl').className = 'url-input saved';
+  updateConnectionUI(true, saved);
+  document.getElementById('connectBadge').className = 'tab-badge ok';
+  document.getElementById('connectBadge').textContent = '✓';
+}
+
+setTimeout(loadDraft, 100);
+setInterval(saveDraft, 60000);
+</script>
+</body>
+</html>
