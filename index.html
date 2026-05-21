@@ -519,7 +519,7 @@ body{font-family:var(--sans);background:var(--gray-50);color:var(--gray-900);min
   <div class="submit-bar">
     <div>
       <div style="font-weight:600;font-size:13px" id="submitLabel">Ready to submit</div>
-      <div class="submit-info" id="submitInfo">Items will POST to your Power Automate flow and appear in the SharePoint list.</div>
+      <div class="submit-info" id="submitInfo">Items will be written directly to your SharePoint list via Microsoft Graph API.</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="add-btn secondary" onclick="saveDraft()">💾 Save Draft</button>
@@ -544,7 +544,7 @@ body{font-family:var(--sans);background:var(--gray-50);color:var(--gray-900);min
   </div>
 
   <div class="callout">
-    <strong>How it works:</strong> The form POSTs JSON to a Power Automate HTTP trigger. The flow catches it and creates a new item in your SharePoint list. Staff never sign in to anything — they just fill out the form and hit Submit.
+    <strong>How it works:</strong> The form POSTs JSON to your Power Automate HTTP trigger URL. The flow creates a new item in your SharePoint Equipment Inventory list. Staff never sign in to anything — they just fill out the form and click Submit.
   </div>
 
   <!-- Step 1 -->
@@ -603,43 +603,42 @@ body{font-family:var(--sans);background:var(--gray-50);color:var(--gray-900);min
 
   <!-- Step 2 -->
   <div class="guide-section">
-    <div class="guide-h"><span style="background:var(--blue-2);color:#fff;width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:600;flex-shrink:0">2</span> Build the Power Automate Flow</div>
+    <div class="guide-h"><span style="background:var(--blue-2);color:#fff;width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:600;flex-shrink:0">2</span> Create an Azure App Registration</div>
 
     <div class="step-block">
       <div class="step-num">a</div>
       <div class="step-content">
-        <div class="step-title">Go to make.powerautomate.com → Create → Instant cloud flow</div>
-        <div class="step-body">Name it: <strong>HCCAA Equipment Inventory — HTTP to SharePoint</strong>. For trigger, search and select <strong>"When an HTTP request is received"</strong>. Click Create.</div>
+        <div class="step-title">Go to portal.azure.com → search "App registrations" → + New registration</div>
+        <div class="step-body">Sign in with your HCCAA account. Name it: <strong>HCCAA Inventory Form</strong>. Supported account types: <strong>Accounts in this organizational directory only</strong>. Click Register.</div>
       </div>
     </div>
     <div class="step-block">
       <div class="step-num">b</div>
       <div class="step-content">
-        <div class="step-title">In the trigger step, click 'Use sample payload to generate schema'</div>
-        <div class="step-body">Go to the <strong>JSON Schema</strong> tab in this form, copy the full schema, paste it into the field, and click Done. The trigger will auto-configure all the fields.</div>
+        <div class="step-title">Add a Redirect URI</div>
+        <div class="step-body">On the overview page click <strong>Add a Redirect URI → Single-page application (SPA)</strong>.<br>
+        Enter: <code style="font-family:var(--mono);font-size:11px">https://ajohnsonhccaa.github.io/hccaa-facilities/</code><br>
+        Click Save. This tells Microsoft it's safe to send tokens to your GitHub Pages URL.</div>
       </div>
     </div>
     <div class="step-block">
       <div class="step-num">c</div>
       <div class="step-content">
-        <div class="step-title">Click '+ New step' → search 'SharePoint' → select 'Create item'</div>
-        <div class="step-body">
-          <strong>Site Address:</strong> https://hccaainc.sharepoint.com/sites/HCCAAFacilities<br>
-          <strong>List Name:</strong> Equipment Inventory<br>
-          Then map each field: click the value box → select the matching dynamic content from the HTTP trigger body.
-        </div>
+        <div class="step-title">Copy the Application (Client) ID</div>
+        <div class="step-body">On the app overview page, copy the <strong>Application (client) ID</strong>. You'll paste this into the form's Connect tab. That's the only credential needed — no secret required.</div>
       </div>
     </div>
     <div class="step-block">
       <div class="step-num">d</div>
       <div class="step-content">
-        <div class="step-title">Save the flow → copy the HTTP POST URL from the trigger step</div>
-        <div class="step-body">After saving, the trigger step shows a long URL starting with <code style="font-family:var(--mono);font-size:11px">https://prod-…logic.azure.com/workflows/…</code>. Copy the whole thing.</div>
+        <div class="step-title">Add API permissions</div>
+        <div class="step-body">Click <strong>API permissions → + Add a permission → Microsoft Graph → Delegated permissions</strong>.<br>
+        Search and add: <strong>Sites.ReadWrite.All</strong><br>
+        Click <strong>Grant admin consent for HCCAA → Yes</strong>.</div>
       </div>
     </div>
-
-    <div class="callout warn" style="margin-top:12px">
-      <strong>Field mapping tip:</strong> In the Create item step, the SharePoint column names must match exactly. If your column is "Equipment Name" the dynamic content token will be named "EquipmentName" (no space). Match them one by one down the list.
+    <div class="callout ok" style="margin-top:12px">
+      <strong>No Azure subscription needed.</strong> App registrations are free with your Microsoft 365 license. If your organization has restricted app registrations, ask your IT admin — it is a one-minute change for them.
     </div>
   </div>
 
@@ -650,18 +649,18 @@ body{font-family:var(--sans);background:var(--gray-50);color:var(--gray-900);min
       <div class="step-num">a</div>
       <div class="step-content">
         <div class="step-title">Go to the Connect tab in this form</div>
-        <div class="step-body">Paste the HTTP POST URL from Power Automate into the URL field → click Save URL. The status indicator at the top will turn green once the connection is verified.</div>
+        <div class="step-body">Paste your Tenant ID, Client ID, Client Secret, and list name → click <strong>Save Credentials</strong>. The status indicator at the top turns green.</div>
       </div>
     </div>
     <div class="step-block">
       <div class="step-num">b</div>
       <div class="step-content">
-        <div class="step-title">Click 'Send Test Record' to verify the flow is working</div>
-        <div class="step-body">This sends a test item to your SharePoint list. Open the list and confirm the test row appeared. Then delete it from SharePoint before distributing the form to staff.</div>
+        <div class="step-title">Click 'Send Test Record' to verify the connection</div>
+        <div class="step-body">This authenticates to Microsoft Graph and creates a test item in your SharePoint list. Open the list and confirm the row appeared. Then delete it from SharePoint before distributing the form to staff.</div>
       </div>
     </div>
     <div class="callout ok" style="margin-top:12px">
-      <strong>Done.</strong> Share the saved HTML file with facilities staff via email, Teams, or a shared drive. They open it in any browser, fill it out, and click Submit — no login, no SharePoint access needed.
+      <strong>Done.</strong> Share <strong>ajohnsonhccaa.github.io/hccaa-facilities</strong> with facilities staff via Teams or email. They open it in any browser, fill it out, and click Submit — no login, no SharePoint access needed.
     </div>
   </div>
 
@@ -675,11 +674,11 @@ body{font-family:var(--sans);background:var(--gray-50);color:var(--gray-900);min
 <div class="page">
   <div style="margin-bottom:20px">
     <div style="font-size:22px;font-weight:600;color:var(--navy);margin-bottom:6px">JSON Schema</div>
-    <div style="font-size:13px;color:var(--gray-600)">Paste this into the Power Automate HTTP trigger → "Use sample payload to generate schema" field.</div>
+    <div style="font-size:13px;color:var(--gray-600)">Reference: the field structure the form sends to Microsoft Graph API. Useful if you later add a Power Automate flow or need to debug submissions.</div>
   </div>
 
   <div class="callout" style="margin-bottom:16px">
-    In your Power Automate flow, click the HTTP trigger step → click <strong>"Use sample payload to generate schema"</strong> → paste the entire block below → click Done. Power Automate will generate the JSON schema automatically from this sample.
+    This is the sample JSON payload showing all fields the form submits. The form now writes directly to SharePoint via Graph API — this tab is a reference for field names and types. SharePoint column internal names use <code style="font-family:var(--mono);font-size:11px">_x0020_</code> in place of spaces.
   </div>
 
   <div class="schema-wrap" id="schemaBlock">
@@ -706,20 +705,30 @@ body{font-family:var(--sans);background:var(--gray-50);color:var(--gray-900);min
 <div class="page">
   <div style="margin-bottom:24px">
     <div style="font-size:22px;font-weight:600;color:var(--navy);margin-bottom:6px">Connect to Power Automate</div>
-    <div style="font-size:13px;color:var(--gray-600)">Paste your HTTP trigger URL here. The URL is saved in this browser so staff don't need to set it up again.</div>
+    <div style="font-size:13px;color:var(--gray-600)">Paste your Power Automate HTTP trigger URL. Saved in this browser — only needs to be done once.</div>
+  </div>
+
+  <div class="callout" style="margin-bottom:20px">
+    <strong>How it works:</strong> The form POSTs JSON directly to your Power Automate HTTP trigger URL. The flow creates a new item in your SharePoint Equipment Inventory list. Staff never sign in to anything — they just fill out the form and click Submit.
   </div>
 
   <div class="connect-card">
-    <span class="connect-label">Power Automate HTTP POST URL</span>
+    <span class="connect-label">Power Automate HTTP Trigger URL</span>
     <input class="url-input" type="url" id="flowUrl"
       placeholder="https://prod-xx.westus.logic.azure.com/workflows/…"
       oninput="checkUrl()">
-    <div class="btn-row">
+    <div style="font-size:11px;color:var(--gray-400);margin-top:4px">From Power Automate → open your flow → HTTP trigger step → copy the HTTP POST URL shown after saving</div>
+    <div class="btn-row" style="margin-top:10px">
       <button class="action-btn btn-save" onclick="saveUrl()">Save URL</button>
-      <button class="action-btn btn-test" onclick="sendTest()">Send Test Record</button>
       <button class="action-btn btn-clear" onclick="clearUrl()">Clear</button>
     </div>
-    <div class="test-result" id="testResult"></div>
+  </div>
+
+  <div class="connect-card">
+    <span class="connect-label">Test Connection</span>
+    <div style="font-size:13px;color:var(--gray-600);margin-bottom:10px">Sends a test record to your SharePoint list to confirm the flow is working.</div>
+    <button class="action-btn btn-test" onclick="sendTest()">Send Test Record</button>
+    <div class="test-result" id="testResult" style="margin-top:12px"></div>
   </div>
 
   <div class="connect-card">
@@ -731,14 +740,17 @@ body{font-family:var(--sans);background:var(--gray-50);color:var(--gray-900);min
     <div style="font-size:12px;color:var(--gray-400);margin-top:8px" id="savedUrlDisplay"></div>
   </div>
 
-  <div class="callout">
-    <strong>Where to find the URL:</strong> In Power Automate, open your flow → click the "When an HTTP request is received" trigger step → after saving the flow, the HTTP POST URL appears at the bottom of that step. It's a long URL starting with <code style="font-family:var(--mono);font-size:11px">https://prod-</code>
-  </div>
-
   <div style="margin-top:20px">
-    <div style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:10px">Distribute to Staff</div>
-    <div class="callout ok">
-      Once the URL is saved and the test passes: save this HTML file (File → Save As in your browser, or right-click → Save Page As) and share that saved file with facilities staff via email, Teams, or a shared network drive. The URL is embedded in the saved file — staff just open it and start submitting.
+    <div style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:10px">Pre-configured for your Facilities Site</div>
+    <div style="overflow-x:auto">
+      <table class="col-table">
+        <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>SharePoint Site</td><td style="font-family:var(--mono);font-size:11px">hccaainc.sharepoint.com/sites/HCCAAFacilitiesManagement</td></tr>
+          <tr><td>List</td><td style="font-family:var(--mono);font-size:11px">Equipment Inventory</td></tr>
+          <tr><td>Submission method</td><td style="font-family:var(--mono);font-size:11px">HTTP POST → Power Automate flow → SharePoint</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -1026,120 +1038,9 @@ function updateCenter() {
   document.getElementById('sumCenter').textContent = centerName || '—';
 }
 
-// ── Submit all ────────────────────────────────────────────────────
-async function submitAll() {
-  const url = getUrl();
-  if (!url) { toast('⚠️ No Power Automate URL set — go to the Connect tab'); switchTabByName('connect'); return; }
-  const all = Object.values(items).flat();
-  if (all.length === 0) { toast('⚠️ No items to submit'); return; }
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true; btn.querySelector('span').textContent = 'Submitting…';
-
-  let sent = 0, failed = 0;
-  for (const item of all) {
-    const payload = buildPayload(item);
-    try {
-      const res = await fetch(url, {
-        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
-      });
-      if (res.ok || res.status === 202) {
-        logEntry(item, 'sent');
-        sent++;
-      } else {
-        logEntry(item, 'fail', `HTTP ${res.status}`);
-        failed++;
-      }
-    } catch(e) {
-      logEntry(item, 'fail', e.message);
-      failed++;
-    }
-  }
-
-  btn.disabled = false; btn.querySelector('span').textContent = 'Submit All Items';
-  document.getElementById('sumSent').textContent = sent;
-  updateSummary();
-
-  if (failed === 0) {
-    toast(`✅ ${sent} item${sent!==1?'s':''} submitted to SharePoint successfully`);
-    // Clear submitted items
-    Object.keys(items).forEach(c => items[c] = []);
-    renderItems(); updateSummary();
-  } else {
-    toast(`⚠️ ${sent} sent, ${failed} failed — check the Submissions tab for details`);
-  }
-}
-
-function buildPayload(item) {
-  const center = document.getElementById('centerName').value;
-  const ctype  = document.getElementById('centerType').value;
-  const iname  = document.getElementById('inspName').value;
-  return {
-    EquipmentName:      item.name,
-    CenterName:         center,
-    CenterType:         ctype,
-    EquipmentCategory:  item.category,
-    Manufacturer:       item.manufacturer,
-    ModelNumber:        item.model,
-    SerialNumber:       item.serial,
-    Year:               item.year,
-    Location:           item.location,
-    Quantity:           parseInt(item.quantity)||1,
-    Condition:          item.condition,
-    MaintenanceFrequency: item.frequency,
-    LastServiceDate:    item.lastService,
-    NextDueDate:        item.nextDue,
-    WarrantyExpiry:     item.warranty,
-    VendorContractor:   item.vendor,
-    WorkOrderStatus:    item.workOrder,
-    InspectorName:      iname,
-    Notes:              item.notes,
-  };
-}
-
-// ── Schema ────────────────────────────────────────────────────────
-function buildSamplePayload() {
-  return {
-    EquipmentName:       "Rooftop Unit #1",
-    CenterName:          "Belton SC",
-    CenterType:          "Senior Center",
-    EquipmentCategory:   "HVAC",
-    Manufacturer:        "Carrier",
-    ModelNumber:         "48XL036-060",
-    SerialNumber:        "1234ABC",
-    Year:                "2015",
-    Location:            "Roof - South Side",
-    Quantity:            1,
-    Condition:           "Fair",
-    MaintenanceFrequency:"Quarterly",
-    LastServiceDate:     "2026-02-15",
-    NextDueDate:         "2026-05-15",
-    WarrantyExpiry:      "",
-    VendorContractor:    "ABC HVAC Services 254-555-0100",
-    WorkOrderStatus:     "None Needed",
-    InspectorName:       "Jane Smith",
-    Notes:               "Filter size 20x25x1. Belt showing wear - check next visit.",
-  };
-}
-
-function renderSchema() {
-  const sample = buildSamplePayload();
-  document.getElementById('schemaText').textContent = JSON.stringify(sample, null, 2);
-  const tbody = document.getElementById('fieldRef');
-  tbody.innerHTML = FIELDS.map((f,i) =>
-    `<tr><td><code style="font-family:var(--mono);font-size:11px">${f.key}</code></td><td>${f.spCol}</td><td class="col-type">${f.type}</td></tr>`
-  ).join('');
-}
-
-function copySchema() {
-  const sample = buildSamplePayload();
-  navigator.clipboard.writeText(JSON.stringify(sample, null, 2))
-    .then(() => toast('✅ Sample payload copied to clipboard'))
-    .catch(() => toast('Select the text and copy manually'));
-}
-
-// ── Connect / URL management ──────────────────────────────────────
+// ── Flow URL management ───────────────────────────────────────────
 function getUrl() {
-  try { return localStorage.getItem('hccaa_flow_url') || ''; } catch(e){ return ''; }
+  try { return localStorage.getItem('hccaa_flow_url') || ''; } catch(e) { return ''; }
 }
 function saveUrl() {
   const url = document.getElementById('flowUrl').value.trim();
@@ -1151,20 +1052,17 @@ function saveUrl() {
     toast('✅ URL saved — click Send Test Record to verify');
     document.getElementById('connectBadge').className = 'tab-badge ok';
     document.getElementById('connectBadge').textContent = '✓';
-  } catch(e){ toast('Could not save — localStorage unavailable'); }
+  } catch(e) { toast('Could not save — localStorage unavailable'); }
 }
 function clearUrl() {
-  try { localStorage.removeItem('hccaa_flow_url'); } catch(e){}
+  try { localStorage.removeItem('hccaa_flow_url'); } catch(e) {}
   document.getElementById('flowUrl').value = '';
   document.getElementById('flowUrl').className = 'url-input';
   updateConnectionUI(false);
   document.getElementById('connectBadge').className = 'tab-badge';
   document.getElementById('connectBadge').textContent = '②';
 }
-function checkUrl() {
-  const v = document.getElementById('flowUrl').value;
-  document.getElementById('flowUrl').className = 'url-input' + (v.startsWith('http') ? '' : '');
-}
+function checkUrl() {}
 function updateConnectionUI(connected, url) {
   const dot  = document.getElementById('statusDot');
   const txt  = document.getElementById('statusText');
@@ -1172,16 +1070,84 @@ function updateConnectionUI(connected, url) {
   const cmsg = document.getElementById('connectMsg');
   const disp = document.getElementById('savedUrlDisplay');
   if (connected) {
-    dot.className = 'status-dot connected'; txt.textContent = 'Connected';
+    dot.className  = 'status-dot connected'; txt.textContent  = 'Connected';
     cdot.className = 'status-dot connected'; cmsg.textContent = 'Flow URL saved. Ready to submit.';
-    disp.textContent = url ? url.substring(0,60) + '…' : '';
+    disp.textContent = url ? url.substring(0, 60) + '…' : '';
   } else {
-    dot.className = 'status-dot'; txt.textContent = 'Not connected';
+    dot.className  = 'status-dot'; txt.textContent  = 'Not connected';
     cdot.className = 'status-dot'; cmsg.textContent = 'No URL saved yet.';
     disp.textContent = '';
   }
 }
 
+// ── Submit all ────────────────────────────────────────────────────
+async function submitAll() {
+  const url = getUrl();
+  if (!url) { toast('⚠️ No flow URL set — go to the Connect tab'); switchTabByName('connect'); return; }
+  const all = Object.values(items).flat();
+  if (all.length === 0) { toast('⚠️ No items to submit'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.querySelector('span').textContent = 'Submitting…';
+
+  let sent = 0, failed = 0;
+  for (const item of all) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildPayload(item)),
+      });
+      if (res.ok || res.status === 202) { logEntry(item, 'sent'); sent++; }
+      else { logEntry(item, 'fail', `HTTP ${res.status}`); failed++; }
+    } catch(e) { logEntry(item, 'fail', e.message); failed++; }
+  }
+
+  btn.disabled = false; btn.querySelector('span').textContent = 'Submit All Items';
+  document.getElementById('sumSent').textContent = sent;
+  updateSummary();
+
+  if (failed === 0) {
+    toast(`✅ ${sent} item${sent !== 1 ? 's' : ''} submitted to SharePoint`);
+    Object.keys(items).forEach(c => items[c] = []);
+    renderItems(); updateSummary();
+  } else {
+    toast(`⚠️ ${sent} sent, ${failed} failed — check the Submissions tab`);
+  }
+}
+
+function buildPayload(item) {
+  const center = document.getElementById('centerName').value;
+  const ctype  = document.getElementById('centerType').value;
+  const iname  = document.getElementById('inspName').value;
+  const idate  = document.getElementById('inspDate').value;
+  return {
+    Title:                   item.name,
+    CenterName:              center,
+    CenterType:              ctype,
+    EquipmentCategory:       item.category,
+    Manufacturer:            item.manufacturer,
+    ModelNumber:             item.model,
+    SerialNumber:            item.serial,
+    Year_x002f_Age:          item.year,
+    LocationonSite:          item.location,
+    Quantity:                parseInt(item.quantity) || 1,
+    Condition:               item.condition,
+    MaintenanceFrequency:    item.frequency,
+    LastServiceDate:         item.lastService || null,
+    NextDueDate:             item.nextDue     || null,
+    WarrantyExpiry:          item.warranty    || null,
+    Vendor_x002f_Contractor: item.vendor,
+    WorkOrderStatus:         item.workOrder,
+    InspectorName:           iname,
+    InspectionDate:          idate            || null,
+    Notes:                   item.notes,
+  };
+}
+
+function buildFields(item) { return buildPayload(item); }
+
+// ── Test connection ───────────────────────────────────────────────
 async function sendTest() {
   const url = getUrl() || document.getElementById('flowUrl').value.trim();
   if (!url) { toast('⚠️ Enter the URL first'); return; }
@@ -1189,30 +1155,41 @@ async function sendTest() {
   resultEl.style.display = 'block';
   resultEl.className = 'test-result pending';
   resultEl.textContent = '⏳ Sending test record to Power Automate…';
-  const payload = buildSamplePayload();
-  payload.EquipmentName = 'TEST RECORD — DELETE ME';
-  payload.Notes = 'This is an automated test from the HCCAA Inventory Form. Please delete this record from SharePoint.';
   try {
     const res = await fetch(url, {
-      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        Title: 'TEST RECORD — DELETE ME',
+        CenterName: 'Belton SC',
+        EquipmentCategory: 'HVAC',
+        Notes: 'Automated test from HCCAA Inventory Form. Please delete this record.',
+      }),
     });
     if (res.ok || res.status === 202) {
       resultEl.className = 'test-result ok';
-      resultEl.textContent = '✅ Test record sent successfully (HTTP ' + res.status + '). Check your SharePoint list — a row named "TEST RECORD — DELETE ME" should appear within 30 seconds. Delete it before going live.';
+      resultEl.textContent = '✅ Test record sent (HTTP ' + res.status + '). Check your SharePoint Equipment Inventory list — a row named "TEST RECORD — DELETE ME" should appear within 30 seconds. Delete it before going live.';
       saveUrl();
     } else {
       resultEl.className = 'test-result fail';
-      resultEl.textContent = '✗ Request failed: HTTP ' + res.status + '. Double-check the URL and that the flow is turned on in Power Automate.';
+      resultEl.textContent = '✗ Request failed: HTTP ' + res.status + '. Check the URL and that the flow is turned on in Power Automate.';
     }
   } catch(e) {
     resultEl.className = 'test-result fail';
-    resultEl.textContent = '✗ Could not reach the URL: ' + e.message + '. Check that the URL is correct and the flow is enabled.';
+    resultEl.textContent = '✗ Could not reach the URL: ' + e.message;
   }
 }
 
+// ── Stubs for compatibility ───────────────────────────────────────
+function saveCreds()  {}
+function clearCreds() { clearUrl(); }
+function checkCreds() {}
+function saveClientId()  { saveUrl(); }
+function clearClientId() { clearUrl(); }
+
 function switchTabByName(name) {
   const tabs = document.querySelectorAll('.tab');
-  const map = {entry:0,setup:1,schema:2,connect:3,log:4};
+  const map = { entry:0, setup:1, schema:2, connect:3, log:4 };
   if (map[name] !== undefined) switchTab(name, tabs[map[name]]);
 }
 
@@ -1277,16 +1254,41 @@ function toast(msg) {
   t._t = setTimeout(() => t.classList.remove('show'), 3500);
 }
 
+// ── Schema ────────────────────────────────────────────────────────
+function buildSamplePayload() {
+  return {
+    Title:'Rooftop Unit #1', CenterName:'Belton SC', CenterType:'Senior Center',
+    EquipmentCategory:'HVAC', Manufacturer:'Carrier', ModelNumber:'48XL036-060',
+    SerialNumber:'1234ABC', Year_x002f_Age:'2015', LocationonSite:'Roof - South Side',
+    Quantity:1, Condition:'Fair', MaintenanceFrequency:'Quarterly',
+    LastServiceDate:'2026-02-15', NextDueDate:'2026-05-15', WarrantyExpiry:'',
+    Vendor_x002f_Contractor:'ABC HVAC 254-555-0100', WorkOrderStatus:'None Needed',
+    InspectorName:'Jane Smith', InspectionDate:'2026-05-20',
+    Notes:'Filter size 20x25x1. Belt showing wear.',
+  };
+}
+function renderSchema() {
+  document.getElementById('schemaText').textContent = JSON.stringify(buildSamplePayload(), null, 2);
+  document.getElementById('fieldRef').innerHTML = FIELDS.map(f =>
+    `<tr><td><code style="font-family:var(--mono);font-size:11px">${f.key}</code></td><td>${f.spCol}</td><td class="col-type">${f.type}</td></tr>`
+  ).join('');
+}
+function copySchema() {
+  navigator.clipboard.writeText(JSON.stringify(buildSamplePayload(), null, 2))
+    .then(() => toast('✅ Copied to clipboard'))
+    .catch(() => toast('Select the text and copy manually'));
+}
+
 // ── Init ──────────────────────────────────────────────────────────
 document.getElementById('inspDate').valueAsDate = new Date();
 switchCat('HVAC');
 updateSummary();
 
-const saved = getUrl();
-if (saved) {
-  document.getElementById('flowUrl').value = saved;
+const savedUrl = getUrl();
+if (savedUrl) {
+  document.getElementById('flowUrl').value = savedUrl;
   document.getElementById('flowUrl').className = 'url-input saved';
-  updateConnectionUI(true, saved);
+  updateConnectionUI(true, savedUrl);
   document.getElementById('connectBadge').className = 'tab-badge ok';
   document.getElementById('connectBadge').textContent = '✓';
 }
